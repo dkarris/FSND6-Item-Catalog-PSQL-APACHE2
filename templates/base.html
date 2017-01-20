@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+
+<title> Hello from Flask! </title>
+
+{% if name %}
+  <h2> Hello,{{name}}!</h2>
+{% else %}
+  <h2> Hello, world! </h2>
+{% endif %}
+<p> this request has the following args </p>
+{{request.args}} <BR>
+<p> this request has the following cookies: </p>
+{{request.cookies}} <BR>
+<p> this request has the following values: </p>
+{{request.values}} <BR>
+<p> this request has the following headers: </p>
+{{request.headers}} <BR>
+<p> this request has the following url: </p>
+{{request.base_url}} <BR>
+<p> Any is_xhr headers?: </p>
+{{request.is_xhr}} <BR>
+<p> Endpoint?: </p>
+{{request.endpoint}} <BR>
+
+<p> view args?: </p>
+{{request.view_args}} <BR>
+
+<h1> Session stuff </h1>
+<p> Session new: ? </p>
+{{session.new}}
+<!-- <p> Session domain: ? </p>
+session.get_cookie_domain()
+ -->
+</html>

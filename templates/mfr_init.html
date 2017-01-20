@@ -1,0 +1,41 @@
+<html>
+  <head>
+    <title></title>
+    <meta content="">
+    <style></style>
+  </head>
+  <body>
+    <div id="records">
+      <H3> Here is the content of car makers database </H3>
+      
+        {% if curr_records %}
+          <table>
+          <th>N</th><th>Country</th><th>MFR</th><th>MFR_commonname</th><th>Vehicle Type </th>
+          {% for record in curr_records %}
+            <tr>
+              <td>{{record.id}}</td>
+              <td>{{record.country}}</td>
+              <td>{{record.name}}</td>
+              <td>{{record.commonname}}</td>
+              <td>{{record.vehicle_type}}</td>
+            </tr>
+          {% endfor %}
+          </table>
+        {% else %}
+          <p> No data is present in mfr db </p>
+        {% endif %}
+    </div>
+    <form name='mfr_init' action="/initmfr">
+      <H3> Enter the page number to load from VPIC website </H3>
+     <input type="text" name = "page" value="1">
+     <input type="submit" action>
+    </form>
+<!-- jQuery load -->
+  <script
+  src="https://code.jquery.com/jquery-3.1.1.min.js"
+  integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+  crossorigin="anonymous"></script>
+  <script type="text/javascript">
+  </script>
+  </body>
+</html>
