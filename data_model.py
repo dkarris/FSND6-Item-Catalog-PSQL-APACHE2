@@ -19,40 +19,51 @@ class Mfr(Base):
     def getMFCdata(page):
         URL_MFRBASE = 'https://vpiclist.cdan.dot.gov/vpiclistapi/vehicles/'\
         'getallmanufacturers?format=json&page=%s'
+        # print URL_MFRBASE % page
         r = requests.get(URL_MFRBASE % page)
         return r.json()['Results']
 
 # Parse JSON and populate mfr_db table of the database with JSON data
     @staticmethod
-    def fill_mfr_db(page):
-        if engine.has_table('mfr_db'):
+    def fill_mfr_db(page, deleteTable):
+        if deleteTable == "yes":
             Mfr.__table__.drop(engine)
-        data = Mfr.getMFCdata(page)
         Base.metadata.create_all(engine)
+        data = Mfr.getMFCdata(int(page))
 # this list keeps the number of id's processed
         ids = []
+# count for records appended and total records retrieved 
+        new_records = 0
+        total_records = len(data)
         for mfr_row in data:
-# Check for unique ID - some id's from API are doubled and not unique!
-            if mfr_row['Mfr_ID'] not in ids:
-                type_vehicle = False
-                ids.append(mfr_row['Mfr_ID'])
+# Check if Mfr_ID exists in DB = if yes => skip the record
+            if sql_session.query(Mfr).filter(Mfr.id == mfr_row['Mfr_ID']).count() == 0:
+# Check for unique ID -some id's from API are doubled and not unique!So we put processed IDS into list ids
+                if mfr_row['Mfr_ID'] not in ids:
+                    type_vehicle = False
+                    ids.append(mfr_row['Mfr_ID'])
 # Here is the algo for setting VehicleType field. The logic is that we loop through all VehicleTypes
 # and look for IsPrimary = True field.
-                if len(mfr_row['VehicleTypes']) != 0:
-                    for vehicle_type in mfr_row['VehicleTypes']:
-                        if vehicle_type['IsPrimary'] == True:
-                            type_vehicle = vehicle_type['Name']
-# Sometimes even if vehicle type is set, no primary key is defined.
+                    if len(mfr_row['VehicleTypes']) != 0:
+                        for vehicle_type in mfr_row['VehicleTypes']:
+                            if vehicle_type['IsPrimary'] == True:
+                                type_vehicle = vehicle_type['Name']
+# Sometimes even if vehicle type is set, no primary key is defined - NHTSA data consistency bug
 # So we check that after iterating we have vehilce
-# type set. If not = > manually set to no primary key.
+# type set. If not = > manually set to 'no primary key'.
 # The same value is assigned when no VehicleType info is present
-                if not type_vehicle:
-                    type_vehicle = 'No primary type'
-                    mfr_line = Mfr(id=mfr_row['Mfr_ID'], country=mfr_row['Country'],
-                                   commonname=mfr_row['Mfr_CommonName'], name=mfr_row['Mfr_Name'],
-                                   vehicle_type=type_vehicle)
-                sql_session.add(mfr_line)
-        sql_session.commit()
+                    if not type_vehicle:
+                        type_vehicle = 'No primary type'
+                    mfr_line = Mfr(id=mfr_row['Mfr_ID'],country=mfr_row['Country'],
+                                       commonname=mfr_row['Mfr_CommonName'],
+                                       name=mfr_row['Mfr_Name'],vehicle_type=type_vehicle)
+                    sql_session.add(mfr_line)
+                    new_records += 1
+            sql_session.commit()
+        print 'data_model func'
+        print new_records, total_records
+        return  new_records, total_records
+
 
 # class used to store Models based on loaded manufactures
 class Model(Base):

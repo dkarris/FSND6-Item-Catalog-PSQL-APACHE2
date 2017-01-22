@@ -1,13 +1,11 @@
-<html>
-  <head>
-    <title></title>
-    <meta content="">
-    <style></style>
-  </head>
-  <body>
+{% extends "main.html" %} 
+{% block content %}
+    <div>
+      <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#loadMFR">Add new car manufactures
+      </button>
+    </div>
     <div id="records">
       <H3> Here is the content of car makers database </H3>
-      
         {% if curr_records %}
           <table>
           <th>N</th><th>Country</th><th>MFR</th><th>MFR_commonname</th><th>Vehicle Type </th>
@@ -22,20 +20,89 @@
           {% endfor %}
           </table>
         {% else %}
-          <p> No data is present in mfr db </p>
+          <h4 style> No data is present in mfr db </h4>
         {% endif %}
     </div>
-    <form name='mfr_init' action="/initmfr">
-      <H3> Enter the page number to load from VPIC website </H3>
-     <input type="text" name = "page" value="1">
-     <input type="submit" action>
-    </form>
-<!-- jQuery load -->
-  <script
-  src="https://code.jquery.com/jquery-3.1.1.min.js"
-  integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
-  crossorigin="anonymous"></script>
+<!-- Modal for new Manufacture select -->
+<div class="modal fade" id="loadMFR" tabindex="-1" role="dialog" aria-labelled="loadMFR">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class = "close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel"> Load new manufactures in DB</h4>
+      </div>
+      <div class="modal-body">
+        <form name='mfr_init' method = "POST" action="/initmfr">
+          <H3> Enter the page number to load from VPIC website </H3>
+          <input type="number" name = "page" min="1" max="100">
+          <p> Delete old database table before updating with new values? </p>
+          <input type="radio" name="drop_table" value="yes" checked> Delete old data <br>
+          <input type="radio" name="drop_table" value="no"> Leave old data and append with new data <br>
+          <input type="submit" action>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close window</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Start welcome modal window -->
+<div class="modal fade"  id="myModal" tabindex="-1" role="dialog" aria-labelled="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+     <div class = "modal-header">
+      <button type="button" class = "close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel"> Welcome to application DB management</h4>
+      </div>
+      <div class="modal-body">
+        In this window you can see what is currently loaded into application DB.
+        Cars and makes are loaded from NHTSA API using JSON requests.
+        After that, using Flickr API and search terms link to pics is loaded from Flickr.com
+        Unfortunely, as many other free resources, data consistency is not really good and sometimes really strange data can getinto the DB.
+        Though, the goal of this project is to demonstate general capabilites using Flask as a backend solution and working with AJAX in Python and this data set will suffice for that.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close window</button>
+      </div>
+      </div>
+    </div>
+  </div>
+ <!-- Launching modal on page load  
   <script type="text/javascript">
-  </script>
-  </body>
-</html>
+      $(window).on('load', function()
+      {
+        $('#myModal').modal('show');
+      });
+    </script> -->
+{% if new_records or total_records %}
+<!-- If there is number of records passed => we called this template from initmfr procedure
+and we display modal showing number of records appended -->
+  <div class="modal fade"  id="recordModal" tabindex="-1" role="dialog" aria-labelled="recordLabelModal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+     <div class = "modal-header">
+      <button type="button" class = "close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="recordLabelModal"> Database updated successfully!</h4>
+      </div>
+      <div class="modal-body">
+        {{total_records}} of total records retrieved from NHTSA API <BR>
+        {{new_records}} of records added to database of cars manufactures
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close window</button>
+      </div>
+      </div>
+    </div>
+  </div>
+  <script type="text/javascript">
+      $(window).on('load', function()
+      {
+        $('#recordModal').modal('show');
+      });
+   </script> -->
+{% endif %}
+{% endblock %}

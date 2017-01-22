@@ -7,29 +7,40 @@ from config import sql_session, engine
 
 app = Flask(__name__)
 
-# @app.route('/temp')
-# def temp():
-#     url = 'https://vpiclist.cdan.dot.gov/vpiclistapi/vehicles/getmodelsformakeyear/make/tesla/modelyear/2016?format=json'
-#     # url2 = 'http://vpic.nhtsa.dot.gov/api/vehicles/getmakeformanufacturer/honda?format=json'
-#     # url3 = 'https://vpiclist.cdan.dot.gov/vpiclistapi/vehicles/getmakeformanufacturer/honda?format=json'
-#     r = requests.get(url)
-#     return str(r.json())
-
-@app.route('/listmfr/')
-def init():
+@app.route('/loadmfr')
+def loadmfr():
+    '''
+    Displays form showing current manufacturers records and asking user to select another page
+    to load from VPIC API or proceed with the current set    
+    '''
+    # if request.args['records']:
+    #     records = request.args['records']
+    new_records, total_records = request.args.get('new_records'), request.args.get('total_records')
     if engine.has_table('mfr_db'):
         curr_records = sql_session.query(Mfr).all()
     else:
         curr_records  = None
-    return render_template('mfr_init.html', curr_records =curr_records)
+    print 'records'
+    print new_records, total_records
+    return render_template('mfr_init.html', curr_records =curr_records,
+                            new_records =new_records, total_records = total_records)
 
-@app.route('/initmfr/')
+
+@app.route('/initmfr' , methods=['POST'])
 def initmfr():
-    page = request.args['page']
-    Mfr.fill_mfr_db(page) # Call mfr class static method - erase db and load new values
-    return redirect('/listmfr')
+    '''
+    Receives form parameters and call mfr_db table.
+    deleteTable  = "yes" or "no" - determines if table should be dropped or not (append data)
+    page = number in NHTSA API to get the list of manufactures from
+    '''
+    deleteTable, page = request.form['drop_table'], request.form['page']
+    new_records, total_records = Mfr.fill_mfr_db(page, deleteTable) 
+    print ('this is route func')
+    print new_records, total_records
+    return redirect(url_for('loadmfr', new_records = str(new_records),
+                    total_records=str(total_records)))
 
-@app.route('/showmfr/')
+@app.route('/showmfr')
 def showmodelbymfr():
     id = [962]
     Model.fill_models_db(2016,id)
@@ -38,12 +49,12 @@ def showmodelbymfr():
 @app.route('/somestuff')
 def hello_world():
     arg = request.args.get('name')
-#    flash('aaaa')
+    #flash('aaaa')
     return render_template('base.html', name =arg)
 
 @app.route('/')
 def main_page():
-    return render_template('main.html')
+    return render_template('welcome_page.html')
 @app.errorhandler(404)
 def page_not_found(error):
     return ('Error 404. Better go and search for this information elsewhere')
