@@ -1,0 +1,49 @@
+{% extends "main.html" %} 
+{% block content %}
+<style>
+  form {
+    width:70%;
+    margin: auto;
+  }
+  #header {
+    background-color: #f2f2f2;
+    padding: 10px;
+    border-radius: 5px;
+  }
+  #error {
+    color: red;
+  }
+</style>
+    <form name="mfr_id_edit" method="POST" id="form_edit_mfr">
+     <div class="row" id="header">
+       <H2> Edit manufacture {{record.commonname}}: </H2>
+      </div>
+      <div class="form-group">
+        <label for="mfr_id">Manufacture ID</label>
+        <input type="text" class="form-control" name="mfr_id_edit" id="mfr_id" value="{{record.id}}" disabled>
+      </div>
+      <div class="form-group">
+        <label for="mfr_name"> Manufacture full name </label>
+        <input type="text" class="form-control" name="mfr_full_name" id="mfr_name" value="{{record.name}}">
+      </div>
+      <div class="form-group">
+        <label for="mfr_country">Manufacture country origin</label>
+        <input type="text" class="form-control" name="mfr_country" id="mfr_country" value="{{record.country}}">
+      </div>
+      <div class="form-group">
+        <label for="mfr_commonname">Manufacture short name</label>
+        <input type="text" class="form-control" name="mfr_commonname" id="mfr_commonname" value="{{record.commonname}}">
+      </div>
+      <div class="form-group">
+        <label for="mfr_vehicletype">Manufacture vehicle_type</label>
+        <input type="text" class="form-control" name="mfr_vehicle_type" id="mfr_vehicletype" value="{{record.vehicle_type}}">
+      </div>
+      <input type="submit" class="btn btn-default" value="Submit">
+      <a class="btn btn-default" href="/mainpage">Cancel editing</a>
+      {% if error %}
+        <div id="error">
+          <h3> {{error}} </h3>
+        </div>
+      {% endif %}
+    </form>
+{% endblock %}

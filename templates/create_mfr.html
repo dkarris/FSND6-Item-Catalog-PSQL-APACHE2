@@ -1,0 +1,51 @@
+{% extends "main.html" %} 
+{% block content %}
+<style>
+  form {
+    width:70%;
+    margin: auto;
+  }
+  #header {
+    background-color: #f2f2f2;
+    padding: 10px;
+    border-radius: 5px;
+  }
+  #error {
+    color: red;
+  }
+</style>
+    <form name="mfr_id_create" method="POST" id="form_create_mfr">
+     <div class="row" id="header">
+       <H2> Create new manufacture: </H2>
+      </div>
+      <div class="form-group">
+      <div class="form-group">
+        <label for="mfr_name"> Manufacture full name </label>
+        <input type="text" class="form-control" name="mfr_full_name" id="mfr_name"
+         {% if record_name %} value="{{record_name}}"{% else %} placeholder="Manufacture full name"{% endif %}>
+      </div>
+      <div class="form-group">
+        <label for="mfr_country">Manufacture country origin</label>
+        <input type="text" class="form-control" name="mfr_country" id="mfr_country"
+         {% if record_country %} value="{{record_country}}"{% else %} placeholder="Country"{% endif %}>
+      </div>
+      <div class="form-group">
+        <label for="mfr_commonname">Manufacture short name</label>
+        <input type="text" class="form-control" name="mfr_commonname" id="mfr_commonname" 
+        {% if record_commonname %} value="{{record_commonname}}" {% else %} placeholder="Short name"{% endif %}>
+      </div>
+      <div class="form-group">
+        <label for="mfr_vehicletype">Manufacture vehicle_type</label>
+        <input type="text" class="form-control" name="mfr_vehicle_type" id="mfr_vehicletype" 
+        {% if record_vehicle_type %} value="{{record_vehicle_type}}"{% else %} placeholder="Vehicle type" {% endif %}>
+      </div>
+      <input type="submit" class="btn btn-default" value="Submit">
+      <a class="btn btn-default" href="/mainpage">Cancel creating</a>
+      {% if error %}
+        <div id="error">
+          <h3> {{error}} </h3>
+        </div>
+      {% endif %}
+    </form>
+
+{% endblock %}

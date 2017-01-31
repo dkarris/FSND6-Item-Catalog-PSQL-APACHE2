@@ -1,24 +1,63 @@
 {% extends "main.html" %} 
 {% block content %}
-    <div>
+    <div clas="container">
       <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#loadMFR">Add new car manufactures
       </button>
+      <label for="submit_form" class="btn btn-primary btn-lg"> Add models from checked car manufactures </label>
     </div>
     <div id="records">
       <H3> Here is the content of car makers database </H3>
+<!-- If there are records in mfr_id table => show them all -->
         {% if curr_records %}
-          <table>
-          <th>N</th><th>Country</th><th>MFR</th><th>MFR_commonname</th><th>Vehicle Type </th>
-          {% for record in curr_records %}
-            <tr>
-              <td>{{record.id}}</td>
-              <td>{{record.country}}</td>
-              <td>{{record.name}}</td>
-              <td>{{record.commonname}}</td>
-              <td>{{record.vehicle_type}}</td>
-            </tr>
-          {% endfor %}
-          </table>
+          <form id="load_model" method="POST" action='/initmodel'>
+            <input type="submit" id="submit_form" class="hidden">
+            <table>
+            <!-- 
+            The following commented piece is playing around with jQuery button instead of pure JS
+            <input type="checkbox" name="mfr_id_all" id="toggle_all_checkbox">Select all with jQuery 
+            -->
+            <th>N</th><th>Country</th><th>MFR</th><th>MFR_commonname</th><th>Vehicle Type </th>
+            <th> <input type="checkbox" name="mfr_id_all" id="toggle_all_checkbox" 
+            onchange="toggleAll()"> Select all models</th>
+            {% for record in curr_records %}
+              <tr>
+                <td>{{record.id}}</td>
+                <td>{{record.country}}</td>
+                <td>{{record.name}}</td>
+                <td>{{record.commonname}}</td>
+                <td>{{record.vehicle_type}}</td>
+                <td><input type="checkbox" name="mfr_id" value="{{record.id}}"> </td>
+              </tr>
+            {% endfor %}
+            </table>
+          </form>
+        <script>
+          // JS to toggle all mfr_id checkboxes if mfr_if_all is clicked -->
+          function toggleAll() {
+            var checkboxes = document.getElementById("load_model").elements["mfr_id"];
+            if (document.getElementById("load_model").elements["mfr_id_all"].checked == true) {
+              for (var i=0; i<checkboxes.length; i++) {
+                checkboxes[i].checked = true;
+              }
+            }
+            else {
+              for (var i=0; i<checkboxes.length; i++) {
+                checkboxes[i].checked = false;
+              }
+            }
+          };
+        // End pure JS and same stuff in jQuery just for fun
+        // var toggle_all = $("[name='mfr_id_all']");
+        // var checkboxes = $("[name='mfr_id']");
+        // toggle_all.on('change', function() {
+        //   if (toggle_all[0].checked == true) {
+        //     checkboxes.each (function (){this.checked = true});
+        //   }
+        //   if (toggle_all[0].checked == false)  {
+        //     checkboxes.each (function () {this.checked = false});              
+        //   }
+        //   });
+        </script>
         {% else %}
           <h4 style> No data is present in mfr db </h4>
         {% endif %}

@@ -13,6 +13,7 @@ class Mfr(Base):
     commonname = Column(String(100))
     name = Column(String(100))
     vehicle_type = Column(String(100)) # if vehicle type is present in JSON - load value
+    mfr = relationship("Model", cascade='delete, delete-orphan', single_parent=True)
 
 # Load data from JSON
     @staticmethod
@@ -27,8 +28,14 @@ class Mfr(Base):
     @staticmethod
     def fill_mfr_db(page, deleteTable):
         if deleteTable == "yes":
-            Mfr.__table__.drop(engine)
-        Base.metadata.create_all(engine)
+# The following drop table does not work with cascade delete from model table, at least as of now. Thus
+# simply delete all records for clearing the table
+            # Mfr.__table__.drop(engine)
+            # Base.metadata.create_all(engine)
+            records = sql_session.query(Mfr).all()
+            for record in records:
+                sql_session.delete(record)
+            sql_session.commit()
         data = Mfr.getMFCdata(int(page))
 # this list keeps the number of id's processed
         ids = []
@@ -60,8 +67,6 @@ class Mfr(Base):
                     sql_session.add(mfr_line)
                     new_records += 1
             sql_session.commit()
-        print 'data_model func'
-        print new_records, total_records
         return  new_records, total_records
 
 
@@ -76,7 +81,6 @@ class Model(Base):
     price = Column(Integer)
     user_id = Column(Integer)
     mfr_id = Column(Integer, ForeignKey('mfr_db.id'))
-    mfr = relationship(Mfr)
 
 # Populate models_db with manufactures from mfr_db
 # by using VPIC API
@@ -131,15 +135,24 @@ class Model(Base):
 # Delete the following two lines if no table recreation needed.
         Model.__table__.drop(checkfirst =True)
         Model.__table__.create(checkfirst =True)
-# If list of ID's is empty then populate models for all makes
+# If list of ID's is empty:  either populate models for all makes or do nothing. 
+# The first choice is commented out, for the sake of speed.
 # Else use ids list to find models to populate model_db table
         if len(ids) == 0:
-            mfr = sql_session.query(Mfr).all()
+#            mfr = sql_session.query(Mfr).all() - This will go to populate all makes 
+             return ("No models selected - Nothing to add")
         else:
             mfr = sql_session.query(Mfr).filter(Mfr.id.in_(ids)).all()
+        count = 0
         for entry in mfr:
-# Try to get info from VPIC website API. If not successful, then skip the model
+# Try to get info from NHTSA website API. If not successful, then skip the model
             try:
+# due to bugs in NHTSA database some records don't have short name in this case
+# try to substitute full name. NHTSA model unique ids is all messy, so need to use
+# just mfr name when querying their api
+# so try to plug the first part of the long name and hope that it will work.
+                if not entry.commonname:
+                    entry.commonname = entry.name.split(' ')[0]   
                 model_data = Model.getModeldata(year, entry.commonname.lower())
                 for row in model_data:
                     model_id = row['Model_ID']
@@ -156,7 +169,8 @@ class Model(Base):
                         sql_session.add(model_line)
                         print ('Added model with Id(no commitment made yet): ' + str(model_id) + '.' +
                              entry.commonname + ' ' + model_name)
+                        count += 1
             except:
-                print ('Error raised. MFR ID:' + str(entry.id) + '.' + 'MFR Name:' + entry.name)
+                return ('Error raised. MFR ID:' + str(entry.id) + '.' + 'MFR Name:' + entry.name)
         sql_session.commit()
-        print ('All commits added successfully')
+        return ('All commits added successfully. %s models added succesfully' % count)

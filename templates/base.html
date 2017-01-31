@@ -3,6 +3,10 @@
 
 <title> Hello from Flask! </title>
 
+<p> Displaying all incoming parameters via getlist </p>
+
+{{request.args.getlist('mfr-id')}}
+
 {% if name %}
   <h2> Hello,{{name}}!</h2>
 {% else %}

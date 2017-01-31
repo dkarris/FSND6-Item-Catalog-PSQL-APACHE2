@@ -1,0 +1,197 @@
+{% extends "main.html" %} 
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css?family=Roboto');
+  font-family: 'Roboto', sans-serif;
+  p {
+    vertical-align: 200%;
+    height: auto;
+  }
+  .left_box {
+    background-color:LightGreen;
+  }
+  .right_box {
+    background-color: Lavender;
+  }
+  .left_box, .right_box {
+    overflow-y: auto;
+    height: 100vh;
+    border-radius: 2px;
+    border: 1px solid LightGray;
+  }
+  .hidden {
+    display: none;
+  }
+  #filter_mfr_div, #filter_model_div {
+    height: 40px;
+    background-color:  #4CAF50;
+  }
+  #select_mfr {
+    width: 30%;
+    margin: 2px;
+  }
+  #create_mfr_btn {
+    width: 50%;
+    margin: auto;
+  }
+  .row_data:hover 
+  {
+    background-color: #e1e17f;
+  }
+  .model_row {
+    height:100px;
+    border: 1px solid DarkGray;
+    overflow-y: hidden;
+    margin-top: 5px;
+  }
+  .p_model, .p_model_name {
+    margin-left:10vw;
+    font-family: 'Roboto', sans-serif;
+    font-size: 2rem;
+
+  }
+  img {
+    width: 200px;
+    float:right;
+    vertical-align: top;
+  }
+</style>
+    <div class="container">
+      <div class="left_box col-lg-4">
+      {% if mfrs %}
+        <form id="hidden_form" class="hidden">
+          <input type="hidden" id="mfr" name="mfr">
+          <input type="checkbox" name="filter_check">
+        </form>
+          <div class="row" id="filter_mfr_div">
+            <form name="filter" class="form-inline">
+              <select id="select_mfr" class="form-control">
+                <option name="0" value="0">Show all</option>
+              </select>
+              <a class="btn btn-primary" id="create_mfr_btn" href="{{url_for('createmfr')}}">Create new</a>
+            </form>
+          </div>
+          <div id="table_header">
+            <p> <span>ID</span><span>Country</span><span>Company</span></p>
+          </div>
+        {% for record in mfrs %}
+          <div class="row mfr_row">
+           <p>
+            <span class="row_data">
+              <span id="p_id">{{record.id}} </span>
+              <span id="p_country">{{record.country}}</span>
+              <span id="p_name">{% if record.commonname %}{{record.commonname}}{% else %}{{record.name}}{% endif %}</span>
+<!-- Edit button is designed with jinja/python url_for - redirecting to edit web form. Delete button is designed via JavaScript - to run a modal dialog with confirmation. This is done for practice two approach cases -->
+           <a type="button" class="btn btn-info btn-xs edit_mfr_btn" href="{{url_for('mfr_edit', mfr_id=record.id)}}">Edit</a>
+           </span>
+           <button class="btn btn-info btn-xs delete_mfr_btn">Delete</button>
+          </p>
+        </div>
+        {% endfor %}
+       {% else %}
+        <h4> Now there are no records in the database. Please <a href="/loadmfr">click here</a> to go to database loading tool or add records manually. </h4> 
+      {% endif %}
+      </div>
+      <div class="right_box col-lg-8">
+      {% if models %}
+        <div class="row" id="filter_model_div">
+          <form name="filter_model">
+          </form>
+        </div>
+        {% for model in models %}
+          <div class="row model_row">
+              <p>
+                <span class="p_model">{{model.id}} </span>
+                <span class="p_model_name"> {{model.name}} </span>
+                <span class="p_pic_url"> <a href="{{model.pic_url}}"><img src="{{model.pic_url}}"></a></span>
+              </p>
+          </div>
+        {% endfor %}
+      {% elif mfr_id %}
+        <H3> Manufacture, you've selected doesn't have records in model table </H3>
+      {% else %}
+        <H3> There are no models selected. Please click on the left side for manufacturer selection. Or go to database management
+        tool to make an initial database upload</H3>
+      {% endif %}
+      </div>
+    </div>
+
+<script type="text/javascript">
+// Populate select filters on window load
+$(window).on('load', function()
+      {
+        $(".mfr_row").each( function (){
+          var name = $(this).find("#p_name")[0].innerText.trim();
+          var id = $(this).find("#p_id")[0].innerText.trim();
+          // if length == 1 means that we are filtering already and need to default select element to the only row visible
+          if ($(".mfr_row").length == '1') {
+           $("#select_mfr").append('<option value="'+id+'" selected>'+name+'</option>') 
+          } 
+          else 
+          {
+          $("#select_mfr").append('<option value="'+id+'">'+name+'</option>');
+          }
+        });
+      });
+// jQuery to process delete mfr button
+// Store MFR id, open modal window, pass ID and ask for confirmation
+$(".delete_mfr_btn").click( function() {
+   var x = $(this).prevAll(".row_data").children('#p_id').text().trim();
+   $("#modal_delete_confirm").html(x);
+   var url_delete_mfr = '/mfr/delete/' + x
+   $("#delele_link").attr('href',url_delete_mfr);
+   $("#mfr_delete_modal").modal('show');
+});
+// jQuery Script to handle click on manufacture record
+ $(".row_data").click( function () {
+//   // if rows > 1 => we are in full view then
+//   // assign mfr_id to x
+//   // Populate hidden value and submit the form to pass the value to the right div with models.
+//   // else do nothing
+  if ($(".row_data").length > 1)
+  {
+    var x = $(this).find("#p_id")[0].innerText.trim();
+    $("#mfr")[0].value = x;
+    $("[name=filter_check]").val('');  
+    $("#hidden_form").submit();}
+  });
+// jQuery script to update form on select element change
+$("#select_mfr").on('click', function () {
+  var x = $(this).val();
+  if ( x == 0) 
+  {
+    $("[name=filter_check]").prop("checked", false)
+    // pass existing mfr_id to page
+    var mfr_id = $(".mfr_row").find("#p_id").text().trim()
+    $("#mfr").val(mfr_id);
+  }
+  else 
+  {
+    $("[name=filter_check]").prop("checked", true)
+    $("#mfr").val(x);
+  }
+  $("#hidden_form").submit();
+});
+// jQuery script to open modal with picture when clicked on pic
+// $(".p_pic_url").click( function() {
+//   });
+</script>
+<div class="modal fade"  id="mfr_delete_modal" tabindex="-1" role="dialog" aria-labelled="mfr_delete_modal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+     <div class = "modal-header">
+      <button type="button" class = "close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel"> Warning. You are about to delete the record</h4>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete record with ID <strong id="modal_delete_confirm"> </strong>
+      </div>
+      <div class="modal-footer">
+        <a type="button" class="btn btn-default" id="delele_link" href=""> Delete </a>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close window</button>
+      </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
