@@ -59,7 +59,7 @@ def initmodel():
         return redirect(url_for('loadmfr'))
 
 @app.route('/mainpage')
-def mainpage():
+def mainpage(*mfr_id):
     '''
     Main database view. Incoming parameters:
     mfr_id - passed to the right div with display models
@@ -107,10 +107,11 @@ def model_delete(model_id):
     if not model_id:
         return ('Error. No record to delete. Please go back')
     model_delete_record = sql_session.query(Model).filter(Model.id == model_id).one()
+    mfr = model_delete_record.mfr.id
     sql_session.delete(model_delete_record)
     sql_session.commit()
     flash ('Model with id %s succesfully deleted' % model_id)
-    return redirect(url_for('mainpage'))
+    return redirect(url_for('mainpage', mfr=mfr))
 
 
 @app.route('/model/edit/<int:model_id>', methods=['POST','GET'])
@@ -130,10 +131,11 @@ def model_edit(model_id):
         model_edit_record.name = record_name
         model_edit_record.pic_url = record_pic_url
         try:
+            mfr = model_edit_record.mfr.id
             sql_session.commit()
             flash ('successfully updated model ID: %s, Name: %s' % (model_edit_record.id,
                 model_edit_record.name))
-            return redirect(url_for('mainpage'))
+            return redirect(url_for('mainpage', mfr=mfr))
         except:
             return ('Error updating database. Please try again later')
     else:
@@ -176,7 +178,7 @@ def mfr_edit(mfr_id):
         try:
             sql_session.commit()
             flash ('successfully updated record ID: %s' % mfr_edit_record.id)
-            return redirect (url_for('mainpage'))
+            return redirect (url_for('mainpage', mfr = mfr_id))
         except:
             return ('Error updating database. Please try again later')
     else:
