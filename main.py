@@ -76,6 +76,69 @@ def mainpage():
         mfrs = sql_session.query(Mfr).all()
     return render_template('mainpage.html', mfr_id=mfr_id, models=models, mfrs=mfrs)
 
+@app.route('/createmodel/<int:mfr_id>', methods=['POST','GET'])
+def createmodel(mfr_id):
+    try:
+        parent_mfr = sql_session.query(Mfr).filter(Mfr.id == mfr_id).one()
+    except:
+        return ('Wrong mfr_id. Please Go back to the main page')
+    if request.method == 'POST':
+        model_name = request.form['model_name']
+        model_pic_url = request.form['model_pic_url']
+        if not model_name:
+            error='Model name is empty. This is required field'
+            return render_template('create_model.html', error=error, record_name=model_name,
+                record_pic_url=model_pic_url)
+        try:
+            child_model = Model(name=model_name, pic_url=model_pic_url)
+            parent_mfr.model.append(child_model)
+            sql_session.add(child_model)
+            sql_session.commit()
+            flash ('Model with ID %s and name %s added succesfully for manufacturer %s' % (child_model.id,
+                child_model.name, parent_mfr.commonname))
+            return redirect(url_for('mainpage'))
+        except:
+            return ('Error creating model. Go back to the main page')
+    return render_template('create_model.html', mfr_name=parent_mfr.commonname)    
+
+
+@app.route('/model/delete/<int:model_id>', methods=['POST','GET'])
+def model_delete(model_id):
+    if not model_id:
+        return ('Error. No record to delete. Please go back')
+    model_delete_record = sql_session.query(Model).filter(Model.id == model_id).one()
+    sql_session.delete(model_delete_record)
+    sql_session.commit()
+    flash ('Model with id %s succesfully deleted' % model_id)
+    return redirect(url_for('mainpage'))
+
+
+@app.route('/model/edit/<int:model_id>', methods=['POST','GET'])
+def model_edit(model_id):
+    if not model_id:
+        return ('Error. No record to edit. Please go back')
+    model_edit_record = sql_session.query(Model).filter(Model.id == model_id).one()
+    if request.method =='POST':
+        try:
+            record_name = request.form['model_name']
+            record_pic_url = request.form['model_pic_url']
+        except:
+            return ('Error accessing form.Please <a href="/" > click here </a> to go to main menu')
+        if not record_name:
+            error='Model name is required. Please try again'
+            return render_template('edit_model.html',error=error,record=model_edit_record,record_pic_url=record_pic_url)
+        model_edit_record.name = record_name
+        model_edit_record.pic_url = record_pic_url
+        try:
+            sql_session.commit()
+            flash ('successfully updated model ID: %s, Name: %s' % (model_edit_record.id,
+                model_edit_record.name))
+            return redirect(url_for('mainpage'))
+        except:
+            return ('Error updating database. Please try again later')
+    else:
+        return render_template('edit_model.html', record=model_edit_record)
+
 
 @app.route('/mfr/delete/<int:mfr_id>', methods=['POST','GET'])
 def mfr_delete(mfr_id):
@@ -89,6 +152,8 @@ def mfr_delete(mfr_id):
 
 @app.route('/mfr/edit/<int:mfr_id>', methods=['POST','GET'])
 def mfr_edit(mfr_id):
+    if not mfr_id:
+        return ('Error. No record to edit. Please go back')
     mfr_edit_record = sql_session.query(Mfr).filter(Mfr.id == mfr_id).one()
     if request.method == 'POST':
         values = request.form
@@ -101,7 +166,9 @@ def mfr_edit(mfr_id):
             return ('Error accesing form value. Please <a href="/" > click here </a> to go to main menu')
         if not new_name or not new_country or not new_vehicle_type:
             error = 'All fields except short name must be filled in'
-            return render_template('edit_mfr.html',record=mfr_edit_record,error=error)
+            return render_template('edit_mfr.html',record=mfr_edit_record,error=error,
+                record_name = new_name, record_country = new_country,
+                record_commonname=new_commonname, record_vehicle_type=new_vehicle_type)
         mfr_edit_record.name = new_name
         mfr_edit_record.country = new_country
         mfr_edit_record.commonname = new_commonname
@@ -145,6 +212,7 @@ def createmfr():
     else:
         return render_template('create_mfr.html')
 
+
 @app.route('/somestuff')
 def hello_world():
     d = list()
@@ -161,4 +229,6 @@ def page_not_found(error):
 
 app.secret_key = 'Big_Secret_stuff'
 if __name__ == '__main__':
+    app.jinja_env.trim_blocks = True
+    app.jinja_env.lstrip_blocks = True
     app.run(host ='0.0.0.0', port =5000, debug =True)

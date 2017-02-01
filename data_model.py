@@ -13,7 +13,8 @@ class Mfr(Base):
     commonname = Column(String(100))
     name = Column(String(100))
     vehicle_type = Column(String(100)) # if vehicle type is present in JSON - load value
-    mfr = relationship("Model", cascade='delete, delete-orphan', single_parent=True)
+    model = relationship("Model", cascade='delete, delete-orphan', single_parent=True,
+        backref="mfr")
 
 # Load data from JSON
     @staticmethod

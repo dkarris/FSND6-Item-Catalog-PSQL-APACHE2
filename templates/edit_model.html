@@ -1,0 +1,85 @@
+{% extends "main.html" %} 
+{% block content %}
+<style>
+  form {
+    width:70%;
+    margin: auto;
+  }
+  .form_header {
+    background-color: #f2f2f2;
+    padding: 10px;
+    border-radius: 5px;
+  }
+  #error {
+    color: red;
+  }
+  #main_form {
+    width: 50%;
+  }
+  #pic_preview{
+    width: 50%
+  }
+.container {
+  display: inline-flex;
+  margin: auto;
+}
+img {
+  margin: 2em;
+}
+</style>
+  <div class="container">
+    <div id="main_form">
+      <form name="model_id_edit" method="POST" id="form_edit_model">
+        <div class="row form_header">
+          <H2> Edit model {{record.name}}:</H2>
+        </div>
+        <div class="form-group">
+          <label for="model_id"> Model id</label>
+          <input type="text" class="form-control" name="model_id" id="model_id"
+          placeholder="{{record.id}}" disabled>
+        </div>
+        <div class="form-group">
+          <label for="model_name"> Model name </label>
+          <input type="text" class="form-control" name="model_name" id="model_name"
+          {% if record_name %} value="{{record_name}}"{% else %} value="{{record.name}}"{% endif %}>
+        </div>
+        <div class="form-group">
+          <label for="model_pic_url">Model pic url</label>
+          <input type="text" class="form-control" name="model_pic_url" id="model_pic_url"
+          {% if record_pic_url %} value="{{record_pic_url}}"{% else %} value="{{record.pic_url}}"{% endif %}>
+        </div>
+        <div class="form-group">
+          <label for="user_id">User ID</label>
+          <input type="text" class="form-control" name="user_id" id="user_id" 
+          disabled value="This is temp field">
+        </div>
+        <input type="submit" class="btn btn-default" value="Submit">
+        <a class="btn btn-default" href="/mainpage">Cancel creating</a>
+        {% if error %}
+        <div id="error">
+          <h3> {{error}} </h3>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+    <div id="pic_preview">
+      <div class="form_header">
+        <h2> Pic preview </h2>
+      </div>
+          <img id="img_pic_preview"
+          {% if record_pic_url %} src="{{record_pic_url}}"
+          {% else %}
+            src="{{record.pic_url}}">
+          {% endif %}
+    </div>
+  </div>
+<script>
+// jQuery script to update pic on the right when #model_pic_url is changed
+
+$('#model_pic_url').on('change', function ()
+  {
+    var x = $(this).val();
+    $('#img_pic_preview').attr('src',x);
+  });
+</script>
+{% endblock %}

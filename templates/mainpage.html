@@ -68,7 +68,7 @@
               <select id="select_mfr" class="form-control">
                 <option name="0" value="0">Show all</option>
               </select>
-              <a class="btn btn-primary" id="create_mfr_btn" href="{{url_for('createmfr')}}">Create new</a>
+              <a class="btn btn-info" id="create_mfr_btn" href="{{url_for('createmfr')}}">Create new manufacturer</a>
             </form>
           </div>
           <div id="table_header">
@@ -82,8 +82,8 @@
               <span id="p_country">{{record.country}}</span>
               <span id="p_name">{% if record.commonname %}{{record.commonname}}{% else %}{{record.name}}{% endif %}</span>
 <!-- Edit button is designed with jinja/python url_for - redirecting to edit web form. Delete button is designed via JavaScript - to run a modal dialog with confirmation. This is done for practice two approach cases -->
-           <a type="button" class="btn btn-info btn-xs edit_mfr_btn" href="{{url_for('mfr_edit', mfr_id=record.id)}}">Edit</a>
            </span>
+           <a type="button" class="btn btn-info btn-xs edit_mfr_btn" href="{{url_for('mfr_edit', mfr_id=record.id)}}">Edit</a>
            <button class="btn btn-info btn-xs delete_mfr_btn">Delete</button>
           </p>
         </div>
@@ -93,17 +93,26 @@
       {% endif %}
       </div>
       <div class="right_box col-lg-8">
-      {% if models %}
-        <div class="row" id="filter_model_div">
-          <form name="filter_model">
+      <div class="row" id="filter_model_div">
+          <form name="filter_model" class="form-inline">
+            <label for="mfr_info"> Manufacturer </label>
+            <input type="text" class="form-control" name="mfr_info" value="{{mfr_id}}" disabled>
+          {% if mfr_id %}
+            <a class="btn btn-info" href="{{url_for('createmodel', mfr_id=mfr_id)}}">Create new model</a>
+          {% endif %}
           </form>
         </div>
+      {% if models %}
         {% for model in models %}
           <div class="row model_row">
               <p>
-                <span class="p_model">{{model.id}} </span>
-                <span class="p_model_name"> {{model.name}} </span>
-                <span class="p_pic_url"> <a href="{{model.pic_url}}"><img src="{{model.pic_url}}"></a></span>
+                <span class="row_model_data">
+                  <span class="p_model">{{model.id}} </span>
+                  <span class="p_model_name"> {{model.name}} </span>
+                  <span class="p_pic_url"> <a href="{{model.pic_url}}"><img src="{{model.pic_url}}"></a></span>
+                  <a type="button" class="btn btn-info btn-xs edit_model_btn" href="{{url_for('model_edit', model_id=model.id)}}">Edit</a> 
+                  <button class="btn btn-info btn-xs delete_model_btn">Delete</button>
+                </span>
               </p>
           </div>
         {% endfor %}
@@ -155,7 +164,7 @@ $(".delete_mfr_btn").click( function() {
     $("[name=filter_check]").val('');  
     $("#hidden_form").submit();}
   });
-// jQuery script to update form on select element change
+// jQuery script to update form on mfr select element change
 $("#select_mfr").on('click', function () {
   var x = $(this).val();
   if ( x == 0) 
@@ -171,6 +180,14 @@ $("#select_mfr").on('click', function () {
     $("#mfr").val(x);
   }
   $("#hidden_form").submit();
+});
+// jQuery script to handle delete model modal
+$(".delete_model_btn").click( function() {
+  var x = $(this).prevAll(".p_model").text().trim();
+  $("#model_modal_delete_confirm").html(x);
+  var url_delete_model = '/model/delete/' + x
+  $("#model_delele_link").attr('href',url_delete_model);
+  $("#model_delete_modal").modal('show');
 });
 // jQuery script to open modal with picture when clicked on pic
 // $(".p_pic_url").click( function() {
@@ -189,6 +206,24 @@ $("#select_mfr").on('click', function () {
       </div>
       <div class="modal-footer">
         <a type="button" class="btn btn-default" id="delele_link" href=""> Delete </a>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close window</button>
+      </div>
+      </div>
+    </div>
+  </div>
+<div class="modal fade"  id="model_delete_modal" tabindex="-1" role="dialog" aria-labelled="model_delete_modal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+     <div class = "modal-header">
+      <button type="button" class = "close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel"> Warning. You are about to delete the Model</h4>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete Model with ID <strong id="model_modal_delete_confirm"> </strong>
+      </div>
+      <div class="modal-footer">
+        <a type="button" class="btn btn-default" id="model_delele_link" href=""> Delete </a>
         <button type="button" class="btn btn-default" data-dismiss="modal">Close window</button>
       </div>
       </div>
