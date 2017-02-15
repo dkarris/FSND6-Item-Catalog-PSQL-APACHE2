@@ -6,8 +6,19 @@ from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
+class User(Base):
+    __tablename__ = 'user'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(250), nullable=False)
+    email = Column(String(100), nullable=False)
+    picture = Column(String(250))
+    oauthid = Column(String(250),nullable=False)
+
+
 class Mfr(Base):
     __tablename__ = 'mfr_db'
+
     id = Column(Integer, primary_key=True)
     country = Column(String(100), nullable=False)
     commonname = Column(String(100))
@@ -15,6 +26,8 @@ class Mfr(Base):
     vehicle_type = Column(String(100)) # if vehicle type is present in JSON - load value
     model = relationship("Model", cascade='delete, delete-orphan', single_parent=True,
         backref="mfr")
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship(User, backref="mfr")
 
 # Load data from JSON
     @staticmethod
@@ -27,15 +40,25 @@ class Mfr(Base):
 
 # Parse JSON and populate mfr_db table of the database with JSON data
     @staticmethod
-    def fill_mfr_db(page, deleteTable):
+    def fill_mfr_db(page, deleteTable, login_session):
+        if login_session.get('username') == None:
+            return (0,0,'You must be signed in to add models <BR>' +
+                '<a href="/login">Click here</a> to login')
         if deleteTable == "yes":
 # The following drop table does not work with cascade delete from model table, at least as of now. Thus
-# simply delete all records for clearing the table
+# simply delete all records in MFR for cascade delete the model table
             # Mfr.__table__.drop(engine)
             # Base.metadata.create_all(engine)
             records = sql_session.query(Mfr).all()
             for record in records:
-                sql_session.delete(record)
+                creator_id = record.user_id
+# Check if the record belongs to authorized user
+                if creator_id == login_session['username']:
+                    sql_session.delete(record)
+                else:
+# If not then skip record. Later some nice stuff might be added to get back the list of 
+# models not deleted and returned in a separate modal window
+                    pass
             sql_session.commit()
         data = Mfr.getMFCdata(int(page))
 # this list keeps the number of id's processed
@@ -62,14 +85,16 @@ class Mfr(Base):
 # The same value is assigned when no VehicleType info is present
                     if not type_vehicle:
                         type_vehicle = 'No primary type'
+# Get current user, and update records with that user
                     mfr_line = Mfr(id=mfr_row['Mfr_ID'],country=mfr_row['Country'],
                                        commonname=mfr_row['Mfr_CommonName'],
-                                       name=mfr_row['Mfr_Name'],vehicle_type=type_vehicle)
+                                       name=mfr_row['Mfr_Name'],vehicle_type=type_vehicle,
+                                       user_id=login_session['user_id'])
                     sql_session.add(mfr_line)
                     new_records += 1
             sql_session.commit()
-        return  new_records, total_records
-
+        error_txt = None
+        return  new_records, total_records, error_txt
 
 # class used to store Models based on loaded manufactures
 class Model(Base):
@@ -80,7 +105,8 @@ class Model(Base):
     pic_url = Column(String)
     dealership = Column(String)
     price = Column(Integer)
-    user_id = Column(Integer)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user = relationship(User, backref="model")
     mfr_id = Column(Integer, ForeignKey('mfr_db.id'))
 
 # Populate models_db with manufactures from mfr_db
@@ -101,7 +127,7 @@ class Model(Base):
         return r.json()['Results']
 
 # Retrieve pic link from flickr.com using API and JSON requests.
-# Pic link is formed using flickr.com search engine and tags and not always produces
+# Pic link is formed using flickr.com search engine and tags do not always produce
 # accurate search results
 # But as of now it will suffice
 # Returns url string to store in DB table
@@ -123,10 +149,12 @@ class Model(Base):
         else:
             url_link = '# - no link found on flickr'
         return url_link
+
 # Fill in models_db
 # If present ids = fill only data with manufactures ids in ids
+
     @staticmethod
-    def fill_models_db(year=2016, ids=None):
+    def fill_models_db(login_session,year=2016, ids=None):
 # Check if IDS is a list, otherwise exit
         if not isinstance(ids, list):
             print 'Ids is not list'
@@ -165,7 +193,7 @@ class Model(Base):
                         url_link = Model.getModelPicLink(entry.commonname.lower(), model_name)
                         model_line = Model(id = model_id, name = model_name,
                             mfr_id = entry.id, pic_url = url_link,
-                            dealership = 'placeholder', price = 0, user_id = 0
+                            dealership = 'placeholder', price = 0, user_id = login_session['user_id']
                             )
                         sql_session.add(model_line)
                         print ('Added model with Id(no commitment made yet): ' + str(model_id) + '.' +
@@ -175,3 +203,5 @@ class Model(Base):
                 return ('Error raised. MFR ID:' + str(entry.id) + '.' + 'MFR Name:' + entry.name)
         sql_session.commit()
         return ('All commits added successfully. %s models added succesfully' % count)
+
+Base.metadata.create_all(engine)

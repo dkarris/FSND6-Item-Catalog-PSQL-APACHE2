@@ -21,30 +21,57 @@
       font-weight: 700;
       font-size: 20px;
      }
+     ul {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+      background-color: #dddddd;
+      overflow: hidden;
+     }
+     li {
+      display: inline;
+      margin: 10px 30px;
+     }
+     li :hover {
+      background-color: #111;
+     }
+     header {
+       min-height: 50px;
+       background-color: #dddddd;
+       margin:10px;
+     }
+     .float_right {
+      float:right;
+     }
     </style>
   <body>
   <header> 
     <div>
     <ul>
       <li> <a href ='/'>Home</a></li>
-      <li> <a href= "#">Login</a> </li>
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+          {% for message in messages %}
+            <li class="flashes"> {{message}} </li>
+          {% endfor %}
+     {% endif %}
+  {% endwith %}
+      {% if 'username'in session %}
+        {{session['username']}}
+        {{session['user_id']}}
+        <li class="float_right"> <a href='/fbdisconnect'>Logged as {{session['username']}}</a> </li>
+        <li class="float_right"> <img src={{session['picture']}} </li>
+      {% else %}
+        <li> <a href= "/login">Login</a> </li>
+      {% endif %}
     </ul>
     </div>
-  {% with messages = get_flashed_messages() %}
-    {% if messages %}
-      <ul class=flashes>
-      {% for message in messages %}
-        <li> {{message}} </li>
-      {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
-  </header>
+    </header>
   <!-- This block is the main placeholder for content -->
     {% block content %}
     {% endblock %}
   <footer>
-    <p> This is footer placeholder </p>   
+   <!--  <p> This is footer placeholder </p>    -->
   </footer>
    </body>
 </html>

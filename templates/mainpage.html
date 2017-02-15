@@ -50,7 +50,7 @@
     font-size: 2rem;
 
   }
-  img {
+  .pic {
     width: 200px;
     float:right;
     vertical-align: top;
@@ -109,7 +109,7 @@
                 <span class="row_model_data">
                   <span class="p_model">{{model.id}} </span>
                   <span class="p_model_name"> {{model.name}} </span>
-                  <span class="p_pic_url"> <a href="{{model.pic_url}}"><img src="{{model.pic_url}}"></a></span>
+                  <span class="p_pic_url"> <a href="{{model.pic_url}}"><img class="pic"src="{{model.pic_url}}"></a></span>
                   <a type="button" class="btn btn-info btn-xs edit_model_btn" href="{{url_for('model_edit', model_id=model.id)}}">Edit</a> 
                   <button class="btn btn-info btn-xs delete_model_btn">Delete</button>
                 </span>
