@@ -35,6 +35,9 @@
      li :hover {
       background-color: #111;
      }
+     .li_pic {
+      margin: 2px 30px;
+     }
      header {
        min-height: 50px;
        background-color: #dddddd;
@@ -59,8 +62,8 @@
       {% if 'username'in session %}
         {{session['username']}}
         {{session['user_id']}}
-        <li class="float_right"> <a href='/fbdisconnect'>Logged as {{session['username']}}</a> </li>
-        <li class="float_right"> <img src={{session['picture']}} </li>
+        <li class="float_right"> <a href="{{url_for('disconnect')}}">Logged as {{session['username']}}</a> </li>
+        <li class="float_right li_pic"> <img style= "height:50px;"src={{session['picture']}} </li>
       {% else %}
         <li> <a href= "/login">Login</a> </li>
       {% endif %}

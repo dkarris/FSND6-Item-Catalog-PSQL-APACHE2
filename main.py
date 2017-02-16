@@ -8,6 +8,9 @@ from config import sql_session, engine
 
 #OAUTH stuff goes here
 
+from oauth2client.client import flow_from_clientsecrets, FlowExchangeError
+from oauth2client.clientsecrets import loadfile
+
 # load google and facebook data from from json files
 import json
 
@@ -276,29 +279,130 @@ def login():
     login_session['state'] = state
     return render_template('/loginFB.html', state=state)
 
-@app.route('/gconnect')
+@app.route('/gconnect', methods=['POST'])
 def gconnect():
-    return ('Landed on gconnect')
+    if login_session['state'] != request.args.get('state'):
+        response = make_response(json.dumps('Invalid session state'),401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    one_time_code = request.data
+    print one_time_code
+    scope = 'https://www.googleapis.com/auth/userinfo.profile'
+    try:
+        oauth_flow = flow_from_clientsecrets('client_secret.json',scope,
+            redirect_uri='postmessage')
+        credentials = oauth_flow.step2_exchange(one_time_code)
+    except FlowExchangeError:
+        response = make_response(
+            json.dumps('Failed to exchange one time auth code for auth token'),401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    access_token = credentials.access_token
+    print 'Here is access token'
+    print access_token
+    url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s' % access_token)
+    result = requests.get(url).json()
+    if result.get('error') is not None:
+        response = make_response(json.dumps(result.get('error')), 500)
+        response.headers['Content-Type'] = 'application/json'
+        return response
 
-@app.route('/fbdisconnect')
-def fbdisconnect():
-    facebook_id = login_session['oauthid']
+    gplus_id = credentials.id_token['sub']
+    if result['user_id'] != gplus_id:
+        response = make_response(
+            json.dumps("Token's user ID doesn't match given user ID."), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    client_file_content = loadfile('client_secret.json')[1]
+    CLIENT_ID = client_file_content['client_id']
+    print CLIENT_ID
+    if result['issued_to'] != CLIENT_ID:
+        response = make_response(
+            json.dumps("Token's client ID does not match app's."), 401)
+        print "Token's client ID does not match app's."
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    stored_credentials = login_session.get('credentials')
+    stored_gplus_id = login_session.get('gplus_id')
+    if stored_credentials is not None and gplus_id == stored_gplus_id:
+        response = make_response(json.dumps('Current user is already connected.'),
+                                 200)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    login_session['access_token'] = credentials.access_token
+    login_session['oauthid'] = gplus_id
+
+    # Get user info
+    userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
+    params = {'access_token': credentials.access_token, 'alt': 'json'}
+    answer = requests.get(userinfo_url, params=params)
+
+    data = answer.json()
+
+    login_session['username'] = data['name']
+    login_session['picture'] = data['picture']
+    login_session['email'] = data['email']
+    # ADD PROVIDER TO LOGIN SESSION
+    login_session['provider'] = 'google'
+    # Check if user exists - provider + oauth is in db
+    user_id = getUserID('gl'+str(login_session['oauthid']))
+    if not user_id:
+        user_id = createUser(login_session)
+    login_session['user_id'] = user_id
+    output = ''
+    output += '<h1> Welcome, '
+    output += login_session['username'] + ' with ID:' + str(login_session['user_id'])
+    output += '!</h1>'
+    output += '<img src="'
+    output += login_session['picture']
+    output += ' " style = "width: 300px; height: 300px; border-radious: 150px; -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
+    flash ("You are now logged in as %s" % login_session['username'])
+    return ('aaa')
+
+@app.route('/disconnect')
+def disconnect():
+    if 'provider' not in login_session:
+        return ("No logged session detected. Nothing to disconnect" + 
+                "<BR> <a href='/'> Click here to go to main page </a>")
+    if login_session['provider'] == 'facebook':
+        return redirect(url_for('fbdisconnect'))
+    if login_session['provider'] == 'google':
+        return redirect(url_for('gdisconnect'))
+       
+@app.route('/gdisconnect')
+def gdisconnect():
+    # Only disconnect a connected user.
+    print 'acces_token'
+    print login_session['access_token']
+    print 'username'
+    print login_session['username']
+    print 'oauthid'
+    print login_session['oauthid']
+    if login_session['provider'] != 'google':
+        response = make_response(json.dumps('You are not using google as OAUTH provider'),401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
     access_token = login_session['access_token']
-    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
-    r = requests.delete(url)
-    if r.status_code == 200:
-        login_session.clear()
-        return ('Successfully logged out of Facebook.')
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % access_token
+    result = requests.get(url)
+    if result.status_code != 200:
+        # For whatever reason, the given token was invalid.
+        response = make_response(
+            json.dumps('Failed to revoke token for given user.'), 400)
+        response.headers['Content-Type'] = 'application/json'
+        return response
     else:
-        # print 'username'
-        # print login_session.get('username')
-        return ('Something went wrong: Please see error message: <BR>' + str(r.json()))
-    
+        login_session.clear()
+        return ('Successfully disconnected' +
+                "<BR> <a href='/'> Click here to go to main page </a>")
 
 @app.route('/fbconnect', methods=['POST','GET'])
 def fbconnect():
     if request.args.get('state') != login_session['state']:
-        response = make_response(json.dumps('Invalid token received'), 401)
+        response = make_response(json.dumps('Invalid state token received'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     access_token = request.data
@@ -340,7 +444,20 @@ def fbconnect():
     flash ("You are now logged in as %s" % login_session['username'])
     return output
 
-
+@app.route('/fbdisconnect')
+def fbdisconnect():
+    facebook_id = login_session['oauthid']
+    access_token = login_session['access_token']
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
+    r = requests.delete(url)
+    if r.status_code == 200:
+        login_session.clear()
+        return ('Successfully logged out of Facebook.')
+    else:
+        # print 'username'
+        # print login_session.get('username')
+        return ('Something went wrong: Please see error message: <BR>' + str(r.json()))
+    
 @app.errorhandler(404)
 def page_not_found(error):
     return ('Error 404. Better go and search for this information elsewhere')
