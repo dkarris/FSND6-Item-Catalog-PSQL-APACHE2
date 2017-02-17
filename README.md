@@ -3,9 +3,9 @@
 This project contains catalog data about car manufactures and model they make.
 The app consistst of two big parts:
 ### 1. DB populator/management - where user can make bulk data upload.
-### 2. Catalog with Udacity project rubric
+### 2. Item catalog as per Udacity rubric
 
-### DB populator:
+### 1. DB populator:
 The data is populated using public NHTSA database containig data about manufactures and model. Unfortunately, their public data has some gaps and errors such as dublicate ids and different data structures for certain fields, so some data cleansing is also built in to capture some inconsistencies. This prevents some records to be uploaded to database. At a later stage, after uploading manufactures you can upload models for selected manufactures. Model pic urls are retrieved using flickr api engine.
 This leads to the following problems: 
 - possible pics missmatch => since search is done using keywords/tags, it is up to user who uploaded pic to put correct tags => there are some errors.
@@ -16,7 +16,7 @@ This leads to the following problems:
 it is recommended to select first page from NHTSA api - appox 86 records out of 100 will be uploaded.
 When models will be uploaded I played with Tesla, Aston Martin and BMW - to retrieve model data and pics from flickr. Since it takes some time it is recommended to watch script execution in python flask console where run time info about the process is printed out. That scenario should suffice to examine script behaviour.
 
-### Udacity project aligned with rubric specs
+### 2. Item catalog as per Udacity rubric
 
  -  functionaly with CRUD operations for manufactures and models - authorizing users based on OAUTH unique ids.
  - JSON API endpoints for database object access
