@@ -23,15 +23,15 @@ import random, string
 
 
 app = Flask(__name__)
-app_client_id = json.loads(open('client_secret.json').read())['web']['client_id']
-
+google_app_client_id = json.loads(open('client_secret.json').read())['web']['client_id']
+github_secret_id = json.loads(open('client_secret.json').read())['web']['git_hub_secret_key']
 
 
 @app.route('/loadmfr')
 def loadmfr():
     '''
     Displays form showing current manufacturers records and asking user to select another page
-    to load from VPIC API or proceed with the current set
+    to load from NHTSA VPIC API or proceed with the current set
     '''
 
     new_records, total_records = request.args.get('new_records'), request.args.get('total_records')
@@ -135,7 +135,13 @@ def createmodel(mfr_id):
 def model_delete(model_id):
     if not model_id:
         return ('Error. No record to delete. Please go back')
+    if 'username' not in login_session:
+        flash('Please login to be able to delete content')
+        return redirect(url_for('mainpage'))
     model_delete_record = sql_session.query(Model).filter(Model.id == model_id).one()
+    if model_delete_record.user_id != login_session['user_id']:
+        flash("You are not the original creator! You don't have permission to delete the record")
+        return redirect(url_for('mainpage'))
     mfr = model_delete_record.mfr.id
     sql_session.delete(model_delete_record)
     sql_session.commit()
@@ -147,7 +153,13 @@ def model_delete(model_id):
 def model_edit(model_id):
     if not model_id:
         return ('Error. No record to edit. Please go back')
+    if 'username' not in login_session:
+        flash('Please login to be able to edit content')
+        return redirect(url_for('mainpage'))
     model_edit_record = sql_session.query(Model).filter(Model.id == model_id).one()
+    if model_edit_record.user_id != login_session['user_id']:
+        flash("You are not the original creator! You don't have permission to edit the record")
+        return redirect(url_for('mainpage'))
     if request.method == 'POST':
         try:
             record_name = request.form['model_name']
@@ -269,6 +281,10 @@ def createmfr():
 def welcome_page():
     print 'Logged as'
     print login_session.get('username')
+    print 'Your oauth provider:'
+    print login_session.get('provider')
+    print 'Your user_id is'
+    print login_session.get('user_id')
     return render_template('welcome_page.html')
 
 @app.route('/login')
@@ -278,6 +294,18 @@ def login():
                                 string.digits) for x in xrange(32))
     login_session['state'] = state
     return render_template('/loginFB.html', state=state)
+
+@app.route('/disconnect')
+def disconnect():
+    if 'provider' not in login_session:
+        return ("No logged session detected. Nothing to disconnect" + 
+                "<BR> <a href='/'> Click here to go to main page </a>")
+    if login_session['provider'] == 'facebook':
+        return redirect(url_for('fbdisconnect'))
+    if login_session['provider'] == 'google':
+        return redirect(url_for('gdisconnect'))
+    if login_session['provider'] =='github':
+        return redirect(url_for('git_hubdisconnect'))
 
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
@@ -315,9 +343,9 @@ def gconnect():
         return response
 
     client_file_content = loadfile('client_secret.json')[1]
-    CLIENT_ID = client_file_content['client_id']
-    print CLIENT_ID
-    if result['issued_to'] != CLIENT_ID:
+    # CLIENT_ID = client_file_content['client_id']
+    # print CLIENT_ID
+    if result['issued_to'] != google_app_client_id:
         response = make_response(
             json.dumps("Token's client ID does not match app's."), 401)
         print "Token's client ID does not match app's."
@@ -341,7 +369,7 @@ def gconnect():
     answer = requests.get(userinfo_url, params=params)
 
     data = answer.json()
-
+    print data
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
@@ -360,17 +388,7 @@ def gconnect():
     output += login_session['picture']
     output += ' " style = "width: 300px; height: 300px; border-radious: 150px; -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash ("You are now logged in as %s" % login_session['username'])
-    return ('aaa')
-
-@app.route('/disconnect')
-def disconnect():
-    if 'provider' not in login_session:
-        return ("No logged session detected. Nothing to disconnect" + 
-                "<BR> <a href='/'> Click here to go to main page </a>")
-    if login_session['provider'] == 'facebook':
-        return redirect(url_for('fbdisconnect'))
-    if login_session['provider'] == 'google':
-        return redirect(url_for('gdisconnect'))
+    return output
        
 @app.route('/gdisconnect')
 def gdisconnect():
@@ -454,10 +472,64 @@ def fbdisconnect():
         login_session.clear()
         return ('Successfully logged out of Facebook.')
     else:
-        # print 'username'
-        # print login_session.get('username')
         return ('Something went wrong: Please see error message: <BR>' + str(r.json()))
-    
+
+@app.route('/ghconnect')
+def git_hubconnect():
+    if request.args.get('state') != login_session['state']:
+        response = make_response(json.dumps('Invalid session state when getting one time code'),401)
+        response.headers['Content-Type'] = 'application/json'
+        return response        
+    session_code = request.args.get('code')
+    url = 'https://github.com/login/oauth/access_token'
+    params = {'client_id':'b4bc808d29d3c32880d7', 'code': session_code,
+                'client_secret':github_secret_id,
+                'state': login_session['state']}
+    headers = dict(Accept='application/json')
+# get auth token
+    r = requests.post(url, params=params, headers=headers).json()
+    try:
+        access_token = r['access_token']
+    except:
+        response = make_response(json.dumps('Could not exchange code for token'),401)
+        response.headers['Content-Type'] = 'application/json'
+        return response        
+    scopes = r['scope'] # not need in this implementation, but useful to check for scopes
+    url_userinfo = 'https://api.github.com/user'
+# Retrieve user name, github id, email to store in login_session
+    params = dict(access_token=access_token)
+# get user info with auth token
+    data = requests.get(url_userinfo,params=params).json()
+    login_session['oauthid'] = data['id']
+    login_session['picture'] = data['avatar_url']
+    login_session['username'] = data['login']
+    login_session['access_token'] = access_token
+# get email
+    url_email = 'https://api.github.com/user/emails'
+    login_session['email'] = requests.get(url_email,params=params).json()[0]['email']
+    login_session['provider']='github'
+    # Check if user exists - provider + oauth is in db
+    user_id = getUserID('gh'+str(login_session['oauthid']))
+    if not user_id:
+        user_id = createUser(login_session)
+    login_session['user_id'] = user_id
+    return redirect('/')
+ 
+@app.route('/ghdisconnect')
+def git_hubdisconnect():
+    if login_session['provider'] != 'github':
+        response = make_response(json.dumps('You are not using github as OAUTH provider'),401)
+        response.headers['Content-Type'] = 'application/json'
+
+# Currently github doesn't support logout or at least that's the info found on SO
+# http://stackoverflow.com/questions/21802880/how-to-log-users-out-after-logging-in-with-github
+# Way to do it but requires storing users ids/passwords - which is not the project scope
+# http://stackoverflow.com/questions/17217750/revoking-oauth-access-token-results-in-404-not-found/17225298#17225298
+# So the only way is to clear login_session w/o calling GitHub API
+    login_session.clear()
+    flash('Successfully disconnected from GitHub')
+    return redirect('/')
+
 @app.errorhandler(404)
 def page_not_found(error):
     return ('Error 404. Better go and search for this information elsewhere')

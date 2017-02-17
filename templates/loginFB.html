@@ -11,6 +11,7 @@
 <div class="fb-login-button" data-max-rows="1" data-size="medium"  data-show-faces="false" data-auto-logiout-link="true" data-scope="public_profile, email" onlogin="FBlogin()">
    Login with Facebook
 </div>
+<!-- data-scope="https://www.googleapis.com/auth/plus.login" -->
 <div  id="signInButton">
           <span class="g-signin"
             data-scope="openid email"
@@ -23,6 +24,15 @@
           </span>
 </div>
 <div id="result">
+</div>
+<div id="Github stuff">
+  <p>
+      Well, hello there!
+    </p>
+    <p>
+      We're going to now talk to the GitHub API. Ready?
+      <a href="https://github.com/login/oauth/authorize?scope=user:email&client_id=b4bc808d29d3c32880d7&state={{state}}">Click here</a> to begin!</a>
+    </p>
 </div>
 <script>
   window.fbAsyncInit = function() {

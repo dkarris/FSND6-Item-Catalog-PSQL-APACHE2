@@ -59,13 +59,11 @@
           {% endfor %}
      {% endif %}
   {% endwith %}
-      {% if 'username'in session %}
-        {{session['username']}}
-        {{session['user_id']}}
+      {% if 'oauthid' in session %}
         <li class="float_right"> <a href="{{url_for('disconnect')}}">Logged as {{session['username']}}</a> </li>
         <li class="float_right li_pic"> <img style= "height:50px;"src={{session['picture']}} </li>
       {% else %}
-        <li> <a href= "/login">Login</a> </li>
+        <li class="float_right"> <a href= "/login">Login</a> </li>
       {% endif %}
     </ul>
     </div>
