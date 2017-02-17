@@ -8,12 +8,42 @@
   <script src="https://apis.google.com/js/client:platform.js?onload=start" async defer>
   </script>
  <!-- END Pre-requisites -->
-<div class="fb-login-button" data-max-rows="1" data-size="medium"  data-show-faces="false" data-auto-logiout-link="true" data-scope="public_profile, email" onlogin="FBlogin()">
-   Login with Facebook
-</div>
+<style>
+  .oauth_div {
+    height: 100px;
+    border: solid 2px grey;
+    border-radius: 40px;
+    margin-top:40px;
+  }
+  #signInButton {
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);  
+  }
+  .fb-login-button {
+    margin: 30px;
+  }
+  #github_oauth, #github_link {
+    float:none;
+    margin: 40px auto;
+  }
+  .row {
+    text-align: center;
+  }
+</style>
+<div class="container">
+  <div class="row">
+    <!-- <div class="col-sm-3">
+    </div> -->
+    <div class="col-sm-3 oauth_div col-sm-offset-3" >
+      <div class="fb-login-button" data-max-rows="1" data-size="medium"  data-show-faces="false" data-auto-logiout-link="true" data-scope="public_profile, email" onlogin="FBlogin()">
+         Login with Facebook
+      </div>
+    </div>
 <!-- data-scope="https://www.googleapis.com/auth/plus.login" -->
-<div  id="signInButton">
-          <span class="g-signin"
+    <div class="col-sm-3 oauth_div" style="margin-left: 30px;">
+      <div id="signInButton">
+        <span class="g-signin"
             data-scope="openid email"
             data-clientid="387508415162-4jpblheno3sevlnieefn1j3thb8ltj5q.apps.googleusercontent.com"
             data-redirecturi="postmessage"
@@ -21,18 +51,20 @@
             data-cookiepolicy="single_host_origin"
             data-callback="signInCallback"
             data-approvalprompt="force">
-          </span>
-</div>
-<div id="result">
-</div>
-<div id="Github stuff">
-  <p>
-      Well, hello there!
-    </p>
-    <p>
-      We're going to now talk to the GitHub API. Ready?
-      <a href="https://github.com/login/oauth/authorize?scope=user:email&client_id=b4bc808d29d3c32880d7&state={{state}}">Click here</a> to begin!</a>
-    </p>
+        </span>
+      </div>
+    </div>
+    <!-- <div class="col-sm-3">
+    </div> -->
+  </div>
+  <div class="row">
+    <div class="oauth_div col-sm-3" id="github_oauth">
+      <span id="github_link">
+      <a href="https://github.com/login/oauth/authorize?scope=user:email&client_id=b4bc808d29d3c32880d7&state={{state}}"> <img src="{{url_for('static', filename='GitHub_Logo.png')}}" style="height: 30px;border:0;"><BR> Login with GitHub!</a></span>
+    </div>
+  </div>
+  <div id="result">
+  </div>
 </div>
 <script>
   window.fbAsyncInit = function() {
@@ -54,8 +86,8 @@
   function FBlogin() {
     var fb_oath_response = FB.getAuthResponse();
     var access_token = fb_oath_response['accessToken'];
-    console.log('JS accessdata');
-    console.log(access_token)
+    // console.log('JS accessdata');
+    // console.log(access_token)
     $.ajax ({
       type: 'POST',
       url: '/fbconnect?state={{state}}',
@@ -79,8 +111,8 @@
 function signInCallback(authResult) {
   if (authResult['code']) {
     // Hide the sign-in button now that the user is authorized
-    var x = authResult;
-    console.log(x);
+    // var x = authResult;
+    // console.log(x);
     $('#signinButton').attr('style', 'display: none');
     // Send the one-time-use code to the server, if the server responds, write a 'login successful' message to the web page and then redirect back to the main restaurants page
     $.ajax({

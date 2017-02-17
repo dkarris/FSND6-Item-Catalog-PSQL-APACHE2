@@ -13,7 +13,7 @@ class User(Base):
     name = Column(String(250), nullable=False)
     email = Column(String(100), nullable=False)
     picture = Column(String(250))
-    oauthid = Column(String(250),nullable=False)
+    oauthid = Column(String(250), nullable=False)
 
 
 class Mfr(Base):
@@ -28,6 +28,15 @@ class Mfr(Base):
         backref="mfr")
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     user = relationship(User, backref="mfr")
+
+    def serialize(self):
+        """
+        converts sqlalchemy object to dict
+        """
+        sql2dict = {}
+        for column in self.__table__.columns:
+            sql2dict[column.name] = getattr(self, column.name)
+        return sql2dict    
 
 # Load data from JSON
     @staticmethod
@@ -114,7 +123,15 @@ class Model(Base):
 # year should be greater than 1996 and mfr should be string
 # function returns Json object if success or None if
 # wrong arguments passed
-
+    def serialize(self):
+        """
+        converts sqlalchemy object to dict
+        """
+        sql2dict = {}
+        for column in self.__table__.columns:
+            sql2dict[column.name] = getattr(self, column.name)
+        return sql2dict    
+    
     @staticmethod
     def getModeldata(year, mfr):
         if not isinstance(mfr, basestring):

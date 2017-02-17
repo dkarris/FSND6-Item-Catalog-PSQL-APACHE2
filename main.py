@@ -3,8 +3,8 @@ import json
 # used for generating random state variable
 import random, string
 
-from flask import Flask, render_template, request, redirect, url_for, escape
-from flask import flash, Response
+from flask import Flask, render_template, request, redirect, url_for
+from flask import flash, Response, jsonify
 # login_session is used to store session data
 from flask import session as login_session
 from flask import make_response
@@ -83,11 +83,11 @@ def initmodel():
 
 @app.route('/mainpage')
 def mainpage(*mfr_id):
-    '''
+    """
     Main database view. Incoming parameters:
     mfr_id - passed to the right div with display models
     filter - if toggled on then run query to display only mfr requested on the left side.
-    '''
+    """
 
     checkbox = request.args.get('filter_check')
     mfr_id = request.args.get('mfr')
@@ -297,7 +297,7 @@ def login():
 @app.route('/disconnect')
 def disconnect():
     if 'provider' not in login_session:
-        return ("No logged session detected. Nothing to disconnect" + 
+        return ("No logged session detected. Nothing to disconnect" +
                 "<BR> <a href='/'> Click here to go to main page </a>")
     if login_session['provider'] == 'facebook':
         return redirect(url_for('fbdisconnect'))
@@ -574,6 +574,40 @@ def getUserID(oauthid):
         return user.id
     except:
         return None
+
+# RESTful API functions
+
+@app.route('/mfr/<int:mfr_id>/JSON')
+def mfrinfoJSON(mfr_id):
+    """
+    returns JSON file with MFR data for specific MFR
+    """
+    mfr = sql_session.query(Mfr).filter_by(id=mfr_id).one()
+    return jsonify(mfr.serialize())
+
+@app.route('/mfrall/JSON')
+def mfrallJSON():
+    """
+    returns JSON for all MFR
+    """
+    mfrs = sql_session.query(Mfr).all()
+    return jsonify(mfrs=[mfr.serialize() for mfr in mfrs])
+
+@app.route('/mfr/<int:mfr_id>/models/JSON')
+def model_in_mfrJSON(mfr_id):
+    """
+    returns models for given Mfr with mfr_id
+    """
+    models = sql_session.query(Model).filter_by(mfr_id=mfr_id).all()
+    return jsonify(models=[model.serialize() for model in models])
+
+@app.route('/model/<int:model_id>/JSON')
+def modelJSON(model_id):
+    """
+    returns model with model_id
+    """
+    model = sql_session.query(Model).filter_by(id=model_id).one()
+    return jsonify(model.serialize())
 
 
 app.secret_key = 'Big_Secret_stuff'
