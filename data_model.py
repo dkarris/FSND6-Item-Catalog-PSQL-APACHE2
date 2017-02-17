@@ -26,7 +26,7 @@ class Mfr(Base):
     vehicle_type = Column(String(100)) # if vehicle type is present in JSON - load value
     model = relationship("Model", cascade='delete, delete-orphan', single_parent=True,
         backref="mfr")
-    user_id = Column(Integer, ForeignKey('user.id'))
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     user = relationship(User, backref="mfr")
 
 # Load data from JSON
@@ -105,7 +105,7 @@ class Model(Base):
     pic_url = Column(String)
     dealership = Column(String)
     price = Column(Integer)
-    user_id = Column(Integer, ForeignKey('user.id'))
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     user = relationship(User, backref="model")
     mfr_id = Column(Integer, ForeignKey('mfr_db.id'))
 

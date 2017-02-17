@@ -1,5 +1,14 @@
+# load google and facebook data from from json files
+import json
+# used for generating random state variable
+import random, string
+
 from flask import Flask, render_template, request, redirect, url_for, escape
-from flask import session, flash, Response
+from flask import flash, Response
+# login_session is used to store session data
+from flask import session as login_session
+from flask import make_response
+
 
 import requests
 
@@ -10,17 +19,6 @@ from config import sql_session, engine
 
 from oauth2client.client import flow_from_clientsecrets, FlowExchangeError
 from oauth2client.clientsecrets import loadfile
-
-# load google and facebook data from from json files
-import json
-
-# login_session is used to store session data
-from flask import session as login_session
-from flask import make_response
-
-# used for generating random state variable
-import random, string
-
 
 app = Flask(__name__)
 google_app_client_id = json.loads(open('client_secret.json').read())['web']['client_id']
@@ -54,7 +52,7 @@ def initmfr():
         deleteTable, page = request.form['drop_table'], request.form['page']
         new_records, total_records, error_txt = Mfr.fill_mfr_db(page, deleteTable, login_session)
         if error_txt:
-            return (error_txt)
+            return error_txt
         return redirect(url_for('loadmfr', new_records=str(new_records),
                                 total_records=str(total_records)))
 
@@ -76,11 +74,11 @@ def initmodel():
             try:
                 ids_out.append(int(element))
             except:
-                return (" Can't convert id to integer <BR> Possible tampering "\
-                        "with form parameters?. Please go to '/'")
+                return " Can't convert id to integer <BR> Possible tampering "\
+                        "with form parameters?. Please go to '/'"
 # Run function to fill model_db with selected manufactures with selected IDS
 # Year - 2016 and current logged user
-        flash(Model.fill_models_db(login_session,2016, ids_out))
+        flash(Model.fill_models_db(login_session, 2016, ids_out))
         return redirect(url_for('loadmfr'))
 
 @app.route('/mainpage')
@@ -102,15 +100,15 @@ def mainpage(*mfr_id):
         mfrs = sql_session.query(Mfr).all()
     return render_template('mainpage.html', mfr_id=mfr_id, models=models, mfrs=mfrs)
 
-@app.route('/createmodel/<int:mfr_id>',methods=['POST','GET'])
+@app.route('/createmodel/<int:mfr_id>', methods=['POST', 'GET'])
 def createmodel(mfr_id):
     if 'username' not in login_session:
         flash('Please login to be able to create content')
-        return redirect(url_for('mainpage',mfr=mfr_id))
+        return redirect(url_for('mainpage', mfr=mfr_id))
     try:
         parent_mfr = sql_session.query(Mfr).filter(Mfr.id == mfr_id).one()
     except:
-        return ('Wrong mfr_id. Please Go back to the main page')
+        return 'Wrong mfr_id. Please Go back to the main page'
     if request.method == 'POST':
         model_name = request.form['model_name']
         model_pic_url = request.form['model_pic_url']
@@ -119,7 +117,8 @@ def createmodel(mfr_id):
             return render_template('create_model.html', error=error, record_name=model_name,
                                    record_pic_url=model_pic_url)
         try:
-            child_model = Model(name=model_name, pic_url=model_pic_url)
+            child_model = Model(name=model_name, pic_url=model_pic_url,
+                                user_id=login_session['user_id'])
             parent_mfr.model.append(child_model)
             sql_session.add(child_model)
             sql_session.commit()
@@ -127,14 +126,14 @@ def createmodel(mfr_id):
                   % (child_model.id, child_model.name, parent_mfr.commonname))
             return redirect(url_for('mainpage'))
         except:
-            return ('Error creating model. Go back to the main page')
+            return 'Error creating model. Go back to the main page'
     return render_template('create_model.html', mfr_name=parent_mfr.commonname)
 
 
 @app.route('/model/delete/<int:model_id>', methods=['POST', 'GET'])
 def model_delete(model_id):
     if not model_id:
-        return ('Error. No record to delete. Please go back')
+        return 'Error. No record to delete. Please go back'
     if 'username' not in login_session:
         flash('Please login to be able to delete content')
         return redirect(url_for('mainpage'))
@@ -152,7 +151,7 @@ def model_delete(model_id):
 @app.route('/model/edit/<int:model_id>', methods=['POST', 'GET'])
 def model_edit(model_id):
     if not model_id:
-        return ('Error. No record to edit. Please go back')
+        return 'Error. No record to edit. Please go back'
     if 'username' not in login_session:
         flash('Please login to be able to edit content')
         return redirect(url_for('mainpage'))
@@ -165,7 +164,7 @@ def model_edit(model_id):
             record_name = request.form['model_name']
             record_pic_url = request.form['model_pic_url']
         except:
-            return ('Error accessing form.Please <a href="/" > click here </a> to go to main menu')
+            return 'Error accessing form.Please <a href="/" > click here </a> to go to main menu'
         if not record_name:
             error = 'Model name is required. Please try again'
             return render_template('edit_model.html', error=error, record=model_edit_record,
@@ -179,7 +178,7 @@ def model_edit(model_id):
                                                                    model_edit_record.name))
             return redirect(url_for('mainpage', mfr=mfr))
         except:
-            return ('Error updating database. Please try again later')
+            return 'Error updating database. Please try again later'
     else:
         return render_template('edit_model.html', record=model_edit_record)
 
@@ -187,14 +186,14 @@ def model_edit(model_id):
 @app.route('/mfr/delete/<int:mfr_id>', methods=['POST', 'GET'])
 def mfr_delete(mfr_id):
     if not mfr_id:
-        return ('Error. No record to delete. Please go back')
+        return 'Error. No record to delete. Please go back'
     if 'username' not in login_session:
         flash('Please login to be able to delete content')
-        return redirect(url_for('mainpage',mfr=mfr_id))
+        return redirect(url_for('mainpage', mfr=mfr_id))
     mfr_delete_record = sql_session.query(Mfr).filter(Mfr.id == mfr_id).one()
     if mfr_delete_record.user_id != login_session['user_id']:
         flash("You are not the original creator! You don't have permission to delete the record")
-        return redirect(url_for('mainpage',mfr=mfr_id))
+        return redirect(url_for('mainpage', mfr=mfr_id))
     sql_session.delete(mfr_delete_record)
     sql_session.commit()
     flash('Record successfully deleted')
@@ -202,17 +201,17 @@ def mfr_delete(mfr_id):
 
 @app.route('/mfr/edit/<int:mfr_id>', methods=['POST', 'GET'])
 def mfr_edit(mfr_id):
-    # return ("<script>function myFunction() {alert('You are not authorized to edit this restaurant." +
-    #        " Please create your own restaurant in order to edit.');}</script><body onload='myFunction()''>")
+# return ("<script>function myFunction() {alert('You are not authorized to edit this restaurant." +
+# " Please create your own restaurant in order to edit.');}</script><body onload='myFunction()''>")
     if not mfr_id:
-        return ('Error. No record to edit. Please go back')
+        return 'Error. No record to edit. Please go back'
     if 'username' not in login_session:
         flash('Please login to be able to edit content')
-        return redirect(url_for('mainpage',mfr=mfr_id))
+        return redirect(url_for('mainpage', mfr=mfr_id))
     mfr_edit_record = sql_session.query(Mfr).filter(Mfr.id == mfr_id).one()
     if mfr_edit_record.user_id != login_session['user_id']:
         flash("You are not the original creator! You don't have permission to edit the record")
-        return redirect(url_for('mainpage',mfr=mfr_id))
+        return redirect(url_for('mainpage', mfr=mfr_id))
     if request.method == 'POST':
         values = request.form
         try:
@@ -238,10 +237,9 @@ def mfr_edit(mfr_id):
             flash('successfully updated record ID: %s' % mfr_edit_record.id)
             return redirect(url_for('mainpage', mfr=mfr_id))
         except:
-            return ('Error updating database. Please try again later')
+            return 'Error updating database. Please try again later'
     else:
         return render_template('edit_mfr.html', record=mfr_edit_record)
-
 
 @app.route('/createmfr', methods=['POST', 'GET'])
 def createmfr():
@@ -266,13 +264,14 @@ def createmfr():
         if not commonname:
             commonname = name
         try:
-            mfr = Mfr(name=name, country=country, commonname=commonname, vehicle_type=vehicle_type,)
+            mfr = Mfr(name=name, country=country, commonname=commonname, vehicle_type=vehicle_type,
+                      user_id=login_session['user_id'])
             sql_session.add(mfr)
             sql_session.commit()
             flash('successfully added record. Id: %s, Shortname: %s' % (mfr.id, mfr.commonname))
             return redirect(url_for('mainpage'))
         except:
-            return ('Error updating database. Please try again later')
+            return 'Error updating database. Please try again later'
     else:
         return render_template('create_mfr.html')
 
@@ -291,9 +290,9 @@ def welcome_page():
 def login():
     # Create unique state token and store it
     state = ''.join(random.choice(string.ascii_uppercase +
-                                string.digits) for x in xrange(32))
+                                  string.digits) for x in xrange(32))
     login_session['state'] = state
-    return render_template('/loginFB.html', state=state)
+    return render_template('/login.html', state=state)
 
 @app.route('/disconnect')
 def disconnect():
@@ -304,25 +303,25 @@ def disconnect():
         return redirect(url_for('fbdisconnect'))
     if login_session['provider'] == 'google':
         return redirect(url_for('gdisconnect'))
-    if login_session['provider'] =='github':
+    if login_session['provider'] == 'github':
         return redirect(url_for('git_hubdisconnect'))
 
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
     if login_session['state'] != request.args.get('state'):
-        response = make_response(json.dumps('Invalid session state'),401)
+        response = make_response(json.dumps('Invalid session state'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     one_time_code = request.data
     print one_time_code
     scope = 'https://www.googleapis.com/auth/userinfo.profile'
     try:
-        oauth_flow = flow_from_clientsecrets('client_secret.json',scope,
-            redirect_uri='postmessage')
+        oauth_flow = flow_from_clientsecrets('client_secret.json', scope,
+                                             redirect_uri='postmessage')
         credentials = oauth_flow.step2_exchange(one_time_code)
     except FlowExchangeError:
         response = make_response(
-            json.dumps('Failed to exchange one time auth code for auth token'),401)
+            json.dumps('Failed to exchange one time auth code for auth token'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     access_token = credentials.access_token
@@ -342,7 +341,7 @@ def gconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
 
-    client_file_content = loadfile('client_secret.json')[1]
+    # client_file_content = loadfile('client_secret.json')[1]
     # CLIENT_ID = client_file_content['client_id']
     # print CLIENT_ID
     if result['issued_to'] != google_app_client_id:
@@ -370,7 +369,10 @@ def gconnect():
 
     data = answer.json()
     print data
-    login_session['username'] = data['name']
+    if data['name'] == '': # Sometimes google returns empty name when user is not signed up for G+
+        login_session['username'] = 'Anonymouse Google user'    
+    else:
+        login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
     # ADD PROVIDER TO LOGIN SESSION
@@ -387,9 +389,9 @@ def gconnect():
     output += '<img src="'
     output += login_session['picture']
     output += ' " style = "width: 300px; height: 300px; border-radious: 150px; -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-    flash ("You are now logged in as %s" % login_session['username'])
+    flash("You are now logged in as %s" % login_session['username'])
     return output
-       
+
 @app.route('/gdisconnect')
 def gdisconnect():
     # Only disconnect a connected user.
@@ -400,7 +402,7 @@ def gdisconnect():
     print 'oauthid'
     print login_session['oauthid']
     if login_session['provider'] != 'google':
-        response = make_response(json.dumps('You are not using google as OAUTH provider'),401)
+        response = make_response(json.dumps('You are not using google as OAUTH provider'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     access_token = login_session['access_token']
@@ -417,7 +419,7 @@ def gdisconnect():
         return ('Successfully disconnected' +
                 "<BR> <a href='/'> Click here to go to main page </a>")
 
-@app.route('/fbconnect', methods=['POST','GET'])
+@app.route('/fbconnect', methods=['POST', 'GET'])
 def fbconnect():
     if request.args.get('state') != login_session['state']:
         response = make_response(json.dumps('Invalid state token received'), 401)
@@ -426,11 +428,11 @@ def fbconnect():
     access_token = request.data
     # print 'Access token received from client'
     # print access_token
-    fb_app_id = json.loads(open('fb_data.json','r').read())['FB_App_id']
-    fb_secret = json.loads(open('fb_data.json','r').read())['FB_Secretkey']
-    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
+    fb_app_id = json.loads(open('fb_data.json', 'r').read())['FB_App_id']
+    fb_secret = json.loads(open('fb_data.json', 'r').read())['FB_Secretkey']
+    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token'+'&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
         fb_app_id, fb_secret, access_token)
-    
+
     # Exchanging short lived FB token to long term one
     # https://developers.facebook.com/docs/facebook-login/access-tokens/expiration-and-extension
     # this where udacity code was coming from
@@ -459,66 +461,67 @@ def fbconnect():
     output += '<img src="'
     output += login_session['picture']
     output += ' " style = "width: 300px; height: 300px; border-radious: 150px; -webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-    flash ("You are now logged in as %s" % login_session['username'])
+    flash("You are now logged in as %s" % login_session['username'])
     return output
 
 @app.route('/fbdisconnect')
 def fbdisconnect():
     facebook_id = login_session['oauthid']
     access_token = login_session['access_token']
-    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id, access_token)
     r = requests.delete(url)
     if r.status_code == 200:
         login_session.clear()
-        return ('Successfully logged out of Facebook.')
+        return 'Successfully logged out of Facebook.'
     else:
-        return ('Something went wrong: Please see error message: <BR>' + str(r.json()))
+        return 'Something went wrong: Please see error message: <BR>' + str(r.json())
 
 @app.route('/ghconnect')
 def git_hubconnect():
     if request.args.get('state') != login_session['state']:
-        response = make_response(json.dumps('Invalid session state when getting one time code'),401)
+        response = make_response(json.dumps(
+            'Invalid session state when getting one time code'), 401)
         response.headers['Content-Type'] = 'application/json'
-        return response        
+        return response
     session_code = request.args.get('code')
     url = 'https://github.com/login/oauth/access_token'
     params = {'client_id':'b4bc808d29d3c32880d7', 'code': session_code,
-                'client_secret':github_secret_id,
-                'state': login_session['state']}
+              'client_secret':github_secret_id,
+              'state': login_session['state']}
     headers = dict(Accept='application/json')
 # get auth token
     r = requests.post(url, params=params, headers=headers).json()
     try:
         access_token = r['access_token']
     except:
-        response = make_response(json.dumps('Could not exchange code for token'),401)
+        response = make_response(json.dumps('Could not exchange code for token'), 401)
         response.headers['Content-Type'] = 'application/json'
-        return response        
-    scopes = r['scope'] # not need in this implementation, but useful to check for scopes
+        return response
+    # scopes = r['scope'] # not need in this implementation, but useful to check for scopes
     url_userinfo = 'https://api.github.com/user'
 # Retrieve user name, github id, email to store in login_session
     params = dict(access_token=access_token)
 # get user info with auth token
-    data = requests.get(url_userinfo,params=params).json()
+    data = requests.get(url_userinfo, params=params).json()
     login_session['oauthid'] = data['id']
     login_session['picture'] = data['avatar_url']
     login_session['username'] = data['login']
     login_session['access_token'] = access_token
 # get email
     url_email = 'https://api.github.com/user/emails'
-    login_session['email'] = requests.get(url_email,params=params).json()[0]['email']
-    login_session['provider']='github'
+    login_session['email'] = requests.get(url_email, params=params).json()[0]['email']
+    login_session['provider'] = 'github'
     # Check if user exists - provider + oauth is in db
     user_id = getUserID('gh'+str(login_session['oauthid']))
     if not user_id:
         user_id = createUser(login_session)
     login_session['user_id'] = user_id
     return redirect('/')
- 
+
 @app.route('/ghdisconnect')
 def git_hubdisconnect():
     if login_session['provider'] != 'github':
-        response = make_response(json.dumps('You are not using github as OAUTH provider'),401)
+        response = make_response(json.dumps('You are not using github as OAUTH provider'), 401)
         response.headers['Content-Type'] = 'application/json'
 
 # Currently github doesn't support logout or at least that's the info found on SO
@@ -532,7 +535,7 @@ def git_hubdisconnect():
 
 @app.errorhandler(404)
 def page_not_found(error):
-    return ('Error 404. Better go and search for this information elsewhere')
+    return 'Error 404. Better go and search for this information elsewhere'
 
 def createUser(login_session):
     '''
@@ -547,12 +550,12 @@ def createUser(login_session):
     '''
 
     if login_session['provider'] == 'facebook':
-        oauthid = 'fb' 
+        oauthid = 'fb'
     if login_session['provider'] == 'google':
         oauthid = 'gl'
     if login_session['provider'] == 'github':
         oauthid = 'gh'
-    oauthid = oauthid+ str(login_session['oauthid'])        
+    oauthid = oauthid+ str(login_session['oauthid'])
     newUser = User(name=login_session['username'], email=login_session['email'],
                    picture=login_session['picture'],
                    oauthid=oauthid)
@@ -562,7 +565,7 @@ def createUser(login_session):
     return user.id
 
 def getUserInfo(user_id):
-    user = sql_session.query(User).filter_by(id=user.id).one()
+    user = sql_session.query(User).filter_by(id=user_id).one()
     return user
 
 def getUserID(oauthid):
