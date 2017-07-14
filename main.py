@@ -23,8 +23,9 @@ from oauth2client.clientsecrets import loadfile
 
 app = Flask(__name__)
 google_app_client_id = json.loads(open('client_secret.json').read())['web']['client_id']
+#google_app_client_id = json.loads(open('/var/www/html/catalog/catalog/client_secret.json').read())['web']['client_id']
 github_secret_id = json.loads(open('client_secret.json').read())['web']['git_hub_secret_key']
-
+#github_secret_id = json.loads(open('/var/www/html/catalog/catalog/client_secret.json').read())['web']['git_hub_secret_key']
 
 @app.route('/loadmfr')
 def loadmfr():
@@ -319,6 +320,8 @@ def gconnect():
     try:
         oauth_flow = flow_from_clientsecrets('client_secret.json', scope,
                                              redirect_uri='postmessage')
+        # oauth_flow = flow_from_clientsecrets('/var/www/html/catalog/catalog/client_secret.json', scope, redirect_uri='postmessage')
+        
         credentials = oauth_flow.step2_exchange(one_time_code)
     except FlowExchangeError:
         response = make_response(
