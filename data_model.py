@@ -41,7 +41,7 @@ class Mfr(Base):
 # Load data from JSON
     @staticmethod
     def getMFCdata(page):
-        URL_MFRBASE = 'https://vpiclist.cdan.dot.gov/vpiclistapi/vehicles/'\
+        URL_MFRBASE = 'https://vpic.nhtsa.dot.gov/api/vehicles/'\
         'getallmanufacturers?format=json&page=%s'
         # print URL_MFRBASE % page
         r = requests.get(URL_MFRBASE % page)
@@ -58,6 +58,7 @@ class Mfr(Base):
 # simply delete all records in MFR for cascade delete the model table
             # Mfr.__table__.drop(engine)
             # Base.metadata.create_all(engine)
+            print 'we are here. Deleting the tables'
             records = sql_session.query(Mfr).all()
             for record in records:
                 creator_id = record.user_id
@@ -138,7 +139,7 @@ class Model(Base):
             return None
         if year < 1996:
             return None
-        URL_MODELS = 'https://vpiclist.cdan.dot.gov/vpiclistapi/'\
+        URL_MODELS = 'https://vpic.nhtsa.dot.gov/api/'\
         'vehicles/getmodelsformakeyear/make/%s/modelyear/%s?format=json' % (mfr, year)
         r = requests.get(URL_MODELS)
         return r.json()['Results']

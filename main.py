@@ -11,6 +11,7 @@ from flask import make_response
 
 
 import requests
+import httplib2
 
 from data_model import Base, Mfr, Model, User
 from config import sql_session, engine
@@ -408,6 +409,8 @@ def gdisconnect():
     access_token = login_session['access_token']
     url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % access_token
     result = requests.get(url)
+    print 'result:'
+    print result
     if result.status_code != 200:
         # For whatever reason, the given token was invalid.
         response = make_response(
@@ -430,18 +433,22 @@ def fbconnect():
     # print access_token
     fb_app_id = json.loads(open('fb_data.json', 'r').read())['FB_App_id']
     fb_secret = json.loads(open('fb_data.json', 'r').read())['FB_Secretkey']
-    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token'+'&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
+    url = 'https://graph.facebook.com/v2.8/oauth/access_token?grant_type=fb_exchange_token'+'&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
         fb_app_id, fb_secret, access_token)
-
     # Exchanging short lived FB token to long term one
     # https://developers.facebook.com/docs/facebook-login/access-tokens/expiration-and-extension
     # this where udacity code was coming from
     # also using requests library and not httplib2
 
-    token = requests.get(url).text.split("&")[0]
+    # old line. Deprecated by FB
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[1]
+    data = json.loads(result)
+    token = 'access_token=' + data['access_token']
     userinfo_url = "https://graph.facebook.com/v2.8/me?%s&fields=name,id,email,picture" % token
     r = requests.get(userinfo_url).text
     data = json.loads(r)
+    print data
     login_session['provider'] = 'facebook'
     login_session['username'] = data['name']
     login_session['email'] = data['email']
