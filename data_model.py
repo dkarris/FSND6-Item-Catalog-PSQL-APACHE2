@@ -3,11 +3,12 @@ from config import engine, sql_session
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+import sys
 
 Base = declarative_base()
 
 class User(Base):
-    __tablename__ = 'user'
+    __tablename__ = 'user_db'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
@@ -26,7 +27,7 @@ class Mfr(Base):
     vehicle_type = Column(String(100)) # if vehicle type is present in JSON - load value
     model = relationship("Model", cascade='delete, delete-orphan', single_parent=True,
         backref="mfr")
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('user_db.id'), nullable=False)
     user = relationship(User, backref="mfr")
 
     def serialize(self):
@@ -115,7 +116,7 @@ class Model(Base):
     pic_url = Column(String)
     dealership = Column(String)
     price = Column(Integer)
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('user_db.id'), nullable=False)
     user = relationship(User, backref="model")
     mfr_id = Column(Integer, ForeignKey('mfr_db.id'))
 
@@ -142,7 +143,9 @@ class Model(Base):
         URL_MODELS = 'https://vpic.nhtsa.dot.gov/api/'\
         'vehicles/getmodelsformakeyear/make/%s/modelyear/%s?format=json' % (mfr, year)
         r = requests.get(URL_MODELS)
-        return r.json()['Results']
+	print >> sys.stderr, 'debug for errors in adding models'
+        print >> sys.stderr, r.text
+	return r.json()['Results']
 
 # Retrieve pic link from flickr.com using API and JSON requests.
 # Pic link is formed using flickr.com search engine and tags do not always produce
@@ -175,13 +178,15 @@ class Model(Base):
     def fill_models_db(login_session,year=2016, ids=None):
 # Check if IDS is a list, otherwise exit
         if not isinstance(ids, list):
-            print 'Ids is not list'
+            print >>sys.stderr, 'Ids is not list'
             return None
         Model.metadata.bind = engine
 # Delete the model_db table and create a new one
 # Delete the following two lines if no table recreation needed.
-        Model.__table__.drop(checkfirst =True)
-        Model.__table__.create(checkfirst =True)
+        print >> sys.stderr, 'before  model drop stage'
+#        Model.__table__.drop(checkfirst =True)
+#        Model.__table__.create(checkfirst =True)
+	print >> sys.stderr, 'passed model drop stage'
 # If list of ID's is empty:  either populate models for all makes or do nothing. 
 # The first choice is commented out, for the sake of speed.
 # Else use ids list to find models to populate model_db table
@@ -193,7 +198,8 @@ class Model(Base):
         count = 0
         for entry in mfr:
 # Try to get info from NHTSA website API. If not successful, then skip the model
-            try:
+            print >> sys.stderr, entry
+	    try:
 # due to bugs in NHTSA database some records don't have short name in this case
 # try to substitute full name. NHTSA model unique ids is all messy, so need to use
 # just mfr name when querying their api
@@ -201,7 +207,8 @@ class Model(Base):
                 if not entry.commonname:
                     entry.commonname = entry.name.split(' ')[0]   
                 model_data = Model.getModeldata(year, entry.commonname.lower())
-                for row in model_data:
+                print >> sys.stderr,  "*******"  + str(model_data)
+       	        for row in model_data:
                     model_id = row['Model_ID']
 #Check if this model_id is present in db, if Yes => skip the record
                     if sql_session.query(Model).filter_by(id = model_id).count() == 0:
@@ -214,11 +221,12 @@ class Model(Base):
                             dealership = 'placeholder', price = 0, user_id = login_session['user_id']
                             )
                         sql_session.add(model_line)
-                        print ('Added model with Id(no commitment made yet): ' + str(model_id) + '.' +
+                        print >> sys.stderr, ('Added model with Id(no commitment made yet): ' + str(model_id) + '.' +
                              entry.commonname + ' ' + model_name)
                         count += 1
             except:
-                return ('Error raised. MFR ID:' + str(entry.id) + '.' + 'MFR Name:' + entry.name)
+                print >> sys.stderr, str(entry)
+	        return ('Error raised. MFR ID:' + str(entry.id) + '.' + 'MFR Name:' + entry.name)
         sql_session.commit()
         return ('All commits added successfully. %s models added succesfully' % count)
 
